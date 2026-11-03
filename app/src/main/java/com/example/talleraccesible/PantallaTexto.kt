@@ -3,17 +3,18 @@ package com.example.talleraccesible
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -31,14 +32,16 @@ fun PantallaTexto(vm: AppViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        // Título de la app
         Text(
-            text = "ImageType",
+            text = "Taller Accesible",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
+        // Selector de modo (Simple/Capas) en tarjeta
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
                 CampoLista("Modo", MODOS_TEXTO, t.modo, { t.modo = it })
@@ -49,6 +52,9 @@ fun PantallaTexto(vm: AppViewModel) {
     }
 }
 
+// ============================================================
+// MODO SIMPLE (REDISEÑADO CON CARDS)
+// ============================================================
 @Composable
 private fun PanelSimple(vm: AppViewModel) {
     val env = vm.entorno
@@ -56,6 +62,7 @@ private fun PanelSimple(vm: AppViewModel) {
     val importar = rememberImportadorFuentes(vm)
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
 
+    // Tarjeta de texto y botón pegar
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.Top) {
@@ -83,8 +90,10 @@ private fun PanelSimple(vm: AppViewModel) {
         }
     }
 
+    // Tarjeta de Lienzo y Fondo
     LienzoEditor(s.lienzo) { env.decir(it) }
 
+    // Tarjeta de Estilo del texto (fuentes, colores, bordes)
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
             EstiloEditor(
@@ -92,6 +101,7 @@ private fun PanelSimple(vm: AppViewModel) {
                 onRecargar = { vm.recargarFuentes() }, onImportar = importar,
             )
             
+            // SLIDER para el tamaño
             Text("Tamaño del texto: ${s.estilo.tam}pt", fontWeight = FontWeight.Medium)
             Slider(
                 value = s.estilo.tam.toFloat(),
@@ -102,6 +112,7 @@ private fun PanelSimple(vm: AppViewModel) {
         }
     }
 
+    // Tarjeta de Posición
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
             Seccion("Posición")
@@ -112,81 +123,136 @@ private fun PanelSimple(vm: AppViewModel) {
         }
     }
 
-    Button(
-        onClick = { 
-            s.generar(env)
-            vm.tab = 1 
-        },
-        modifier = Modifier.fillMaxWidth().height(56.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Text("Generar Imagen", fontSize = 18.sp)
-    }
+    BotonesResultado(
+        textoGenerar = "Generar", resultado = s.resultado, ocupado = s.ocupado,
+        onGenerar = { s.generar(env) }, onLimpiar = { s.limpiar(env) }, decir = { env.decir(it) },
+    )
+    VistaPrevia(s.resultado)
 }
 
 // ============================================================
-// PANTALLAS NUEVAS
+// MODO CAPAS (Mantenido original)
 // ============================================================
-
 @Composable
-fun PantallaVistaPrevia(vm: AppViewModel) {
-    val resultado = vm.texto.simple.resultado ?: vm.texto.capas.resultado
+private fun PanelCapas(vm: AppViewModel) {
+    val env = vm.entorno
+    val c = vm.texto.capas
+    val ctx = LocalContext.current
+    val importar = rememberImportadorFuentes(vm)
 
-    Column(
-        Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text("Vista Previa", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        
-        if (resultado != null) {
-            Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(4.dp)) {
-                Image(
-                    bitmap = resultado.bitmap.asImageBitmap(),
-                    contentDescription = resultado.descripcion,
-                    modifier = Modifier.fillMaxWidth().padding(8.dp)
-                )
-            }
-            Text(resultado.descripcion, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            
-            Button(onClick = { vm.compartirActual() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Compartir Imagen")
-            }
-        } else {
-            Text("Aún no has generado ninguna imagen.")
-        }
+    var dlgTexto by remember { mutableStateOf(false) }
+    var dlgRenombrar by remember { mutableStateOf(false) }
+    var imagenPendiente by remember { mutableStateOf<Uri?>(null) }
+
+    val selectorImagen = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) imagenPendiente = uri
     }
-}
 
-@Composable
-fun PantallaAjustes(vm: AppViewModel) {
-    Column(
-        Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text("Configuración", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        
-        Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
-            Column(Modifier.padding(16.dp)) {
-                Text("Tema de la aplicación", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text("Usar tema oscuro")
-                    Spacer(Modifier.weight(1f))
-                    Switch(
-                        checked = vm.forzarOscuro == true,
-                        onCheckedChange = { vm.forzarOscuro = it }
+    LienzoEditor(c.lienzo) { env.decir(it) }
+
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            Seccion("Capas")
+            if (c.capas.isEmpty()) {
+                Text("Sin capas")
+            } else {
+                Text("El orden de la lista es el orden de dibujo: la primera capa queda al fondo.")
+                Column(Modifier.selectableGroup()) {
+                    c.capas.forEachIndexed { i, capa ->
+                        val marcada = i == c.seleccion
+                        val tipo = if (capa is CapaTexto) "capa de texto" else "capa de imagen"
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .selectable(selected = marcada, role = Role.RadioButton, onClick = { c.seleccion = i })
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = marcada, onClick = null)
+                            Spacer(Modifier.width(12.dp))
+                            Text("${i + 1} de ${c.capas.size}: ${capa.nombre}, $tipo")
+                        }
+                    }
+                }
+            }
+
+            val haySeleccion = c.capaActual != null
+            BotonAccion("Agregar capa de texto", { dlgTexto = true }, principal = false)
+            BotonAccion("Agregar capa de imagen", { selectorImagen.launch("image/*") }, principal = false)
+            BotonAccion("Renombrar capa", { dlgRenombrar = true }, enabled = haySeleccion, principal = false)
+            BotonAccion("Eliminar capa", { c.eliminar(env) }, enabled = haySeleccion, principal = false)
+            BotonAccion("Subir capa en la lista", { c.mover(-1, env) }, enabled = haySeleccion, principal = false)
+            BotonAccion("Bajar capa en la lista", { c.mover(1, env) }, enabled = haySeleccion, principal = false)
+
+            when (val capa = c.capaActual) {
+                null -> Text("Agrega o selecciona una capa para editar sus propiedades")
+                is CapaTexto -> {
+                    Seccion("Propiedades de la capa ${capa.nombre}")
+                    CampoTexto(
+                        "Contenido de la capa", capa.contenido,
+                        { c.actualizar(capa.copy(contenido = it)) }, lineas = 3,
                     )
+                    EstiloEditor(
+                        e = capa.estilo, onChange = { c.actualizar(capa.copy(estilo = it)) },
+                        fuentes = vm.fuentes, permitirSin = true,
+                        onRecargar = { vm.recargarFuentes() }, onImportar = importar,
+                    )
+                    CampoNumero("Posición horizontal, por ciento", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 5)
+                    CampoNumero("Posición vertical, por ciento", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 5)
+                }
+                is CapaImagen -> {
+                    Seccion("Propiedades de la capa ${capa.nombre}")
+                    CampoNumero("Escala, por ciento", capa.escala, 10..300, { c.actualizar(capa.copy(escala = it)) }, paso = 10)
+                    CampoNumero("Posición horizontal, por ciento", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 5)
+                    CampoNumero("Posición vertical, por ciento", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 5)
                 }
             }
         }
     }
+
+    BotonesResultado(
+        textoGenerar = "Generar capas", resultado = c.resultado, ocupado = c.ocupado,
+        onGenerar = { c.generar(env) }, onLimpiar = { c.limpiar(env) }, decir = { env.decir(it) },
+        textoLimpiar = "Limpiar capas",
+    )
+    VistaPrevia(c.resultado)
+
+    if (dlgTexto) {
+        DialogoNombre(
+            titulo = "Nueva capa de texto", inicial = "",
+            validar = { c.errorNombre(it) },
+            onAceptar = { c.agregarTexto(it, env); dlgTexto = false },
+            onCancelar = { dlgTexto = false },
+        )
+    }
+    imagenPendiente?.let { uri ->
+        DialogoNombre(
+            titulo = "Nueva capa de imagen",
+            inicial = Imagenes.nombre(ctx, uri).substringBeforeLast('.'),
+            validar = { c.errorNombre(it) },
+            onAceptar = { c.agregarImagen(it, uri, env); imagenPendiente = null },
+            onCancelar = { imagenPendiente = null },
+        )
+    }
+    if (dlgRenombrar) {
+        val actual = c.capaActual
+        if (actual == null) {
+            dlgRenombrar = false
+        } else {
+            DialogoNombre(
+                titulo = "Renombrar capa", inicial = actual.nombre,
+                validar = { c.errorNombre(it, ignorar = c.seleccion) },
+                onAceptar = { c.renombrar(it, env); dlgRenombrar = false },
+                onCancelar = { dlgRenombrar = false },
+            )
+        }
+    }
 }
 
 // ============================================================
-// COMPONENTES REUTILIZABLES (TUS FUNCIONES ORIGINALES)
+// COMPONENTES REUTILIZABLES
 // ============================================================
-
 @Composable
 private fun LienzoEditor(l: LienzoState, decir: (String) -> Unit) {
     val ctx = LocalContext.current
@@ -267,5 +333,3 @@ private fun rememberImportadorFuentes(vm: AppViewModel): () -> Unit {
     }
     return { selector.launch("*/*") }
 }
-
-// (El resto de tus funciones como PanelCapas, BotonesResultado, etc., déjalas tal cual estaban)

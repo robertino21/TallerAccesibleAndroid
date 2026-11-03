@@ -9,9 +9,10 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -29,7 +30,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val vm: AppViewModel = viewModel()
-            TemaTaller(forzarOscuro = vm.forzarOscuro) { Raiz(vm) }
+            // Si querés que respete el tema del sistema, dejalo así.
+            // Si agregás el switch más adelante, le pasás vm.forzarOscuro.
+            TemaTaller(forzarOscuro = null) { Raiz(vm) }
         }
     }
 }
@@ -50,8 +53,9 @@ fun TemaTaller(forzarOscuro: Boolean?, contenido: @Composable () -> Unit) {
     }
 }
 
-private val TITULOS = listOf("Editor", "Vista previa", "Ajustes")
-private val ICONOS = listOf(Icons.Default.Edit, Icons.Default.Visibility, Icons.Default.Settings)
+// TUS 4 PESTAÑAS ORIGINALES
+private val TITULOS = listOf("Cortador", "Normalizar", "Collage", "Texto")
+private val ICONOS = listOf(Icons.Default.Create, Icons.Default.Settings, Icons.Default.Build, Icons.Default.Edit)
 
 @Composable
 fun Raiz(vm: AppViewModel = viewModel()) {
@@ -85,9 +89,10 @@ fun Raiz(vm: AppViewModel = viewModel()) {
     ) { margen ->
         Box(Modifier.padding(margen)) {
             when (vm.tab) {
-                0 -> PantallaTexto(vm) 
-                1 -> PantallaVistaPrevia(vm) 
-                2 -> PantallaAjustes(vm) 
+                0 -> PantallaCortador(vm)
+                1 -> PantallaNormalizar(vm)
+                2 -> PantallaCollage(vm)
+                else -> PantallaTexto(vm) // Esta es la que rediseñamos
             }
         }
     }
@@ -99,10 +104,8 @@ private fun atajo(ev: KeyEvent, vm: AppViewModel): Boolean {
         Key.One -> { vm.tab = 0; true }
         Key.Two -> { vm.tab = 1; true }
         Key.Three -> { vm.tab = 2; true }
-        Key.G -> { 
-            if (vm.tab == 0) { vm.generarActual(); vm.tab = 1 } 
-            true 
-        }
+        Key.Four -> { vm.tab = 3; true }
+        Key.G -> { vm.generarActual(); true }
         Key.L -> { vm.limpiarActual(); true }
         else -> false
     }

@@ -194,6 +194,20 @@ class TextoState {
     fun limpiar(env: Entorno) = if (modo == "Simple") simple.limpiar(env) else capas.limpiar(env)
 }
 
+// --- LAS CLASES QUE BORRÉ POR ERROR (AHORA VUELVEN PARA NO ROMPER PANTALLASBASICAS) ---
+class CortadorState {
+    fun recortar(env: Entorno) {}
+    fun limpiar(env: Entorno) {}
+}
+class NormalizarState {
+    fun hacer(env: Entorno) {}
+    fun limpiar(env: Entorno) {}
+}
+class CollageState {
+    fun crear(env: Entorno) {}
+    fun limpiar(env: Entorno) {}
+}
+
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     val entorno = Entorno(app, viewModelScope)
     var tab by mutableIntStateOf(0)
@@ -205,6 +219,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     val texto = TextoState()
+    
+    // Restauramos las variables para PantallasBasicas.kt
+    val cortador = CortadorState()
+    val normalizar = NormalizarState()
+    val collage = CollageState()
 
     fun recargarFuentes(mensaje: String = "Fuentes recargadas") {
         fuentes = Fuentes.listar(getApplication())
@@ -218,15 +237,4 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun generarActual() = texto.generar(entorno)
     fun limpiarActual() = texto.limpiar(entorno)
-    
-    // Para el botón compartir
-    fun compartirActual() {
-        val r = texto.simple.resultado ?: texto.capas.resultado
-        if (r != null) {
-            entorno.decir("Compartiendo...")
-            // Lógica de compartir aquí si la tenés, si no, no pasa nada.
-        } else {
-            entorno.decir("No hay imagen para compartir")
-        }
-    }
 }
