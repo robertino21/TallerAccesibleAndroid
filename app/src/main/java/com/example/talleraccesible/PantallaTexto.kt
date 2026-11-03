@@ -3,9 +3,10 @@ package com.example.talleraccesible
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -30,9 +31,8 @@ fun PantallaTexto(vm: AppViewModel) {
             .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp), // Más aire entre bloques
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        // Título de la app
         Text(
             text = "Taller Accesible",
             fontSize = 28.sp,
@@ -41,7 +41,6 @@ fun PantallaTexto(vm: AppViewModel) {
             modifier = Modifier.padding(bottom = 4.dp)
         )
 
-        // Selector de modo
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
                 CampoLista("Modo", MODOS_TEXTO, t.modo, { t.modo = it })
@@ -59,7 +58,6 @@ private fun PanelSimple(vm: AppViewModel) {
     val importar = rememberImportadorFuentes(vm)
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
 
-    // 1 y 3. TARJETA DE TEXTO Y BOTÓN PEGAR
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.Top) {
@@ -72,7 +70,6 @@ private fun PanelSimple(vm: AppViewModel) {
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
                 Spacer(Modifier.width(12.dp))
-                // 4. Botón Pegar Azul Oscuro
                 Button(
                     onClick = {
                         val textoPortapapeles = clipboard.getText()?.text ?: ""
@@ -88,7 +85,6 @@ private fun PanelSimple(vm: AppViewModel) {
                     Text("Pegar") 
                 }
             }
-            // 3. Checkbox separado con más aire
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(
@@ -102,10 +98,8 @@ private fun PanelSimple(vm: AppViewModel) {
         }
     }
 
-    // 2. LIENZO Y FONDO (Agrupado y con Sliders para Ancho/Alto)
     LienzoEditorModerno(s.lienzo) { env.decir(it) }
 
-    // TARJETA DE ESTILO
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
             EstiloEditor(
@@ -113,7 +107,6 @@ private fun PanelSimple(vm: AppViewModel) {
                 onRecargar = { vm.recargarFuentes() }, onImportar = importar,
             )
             
-            // SLIDER para el tamaño de la fuente (ya lo teníamos)
             Text("Tamaño del texto: ${s.estilo.tam}pt", fontWeight = FontWeight.Medium)
             Slider(
                 value = s.estilo.tam.toFloat(),
@@ -124,7 +117,6 @@ private fun PanelSimple(vm: AppViewModel) {
         }
     }
 
-    // TARJETA DE POSICIÓN
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
             Seccion("Posición")
@@ -142,9 +134,6 @@ private fun PanelSimple(vm: AppViewModel) {
     VistaPrevia(s.resultado)
 }
 
-// ============================================================
-// LIENZO MODERNO (Con Sliders y ocultando Ancho/Alto)
-// ============================================================
 @Composable
 private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
     val ctx = LocalContext.current
@@ -158,14 +147,12 @@ private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
     val fijo = PRESETS.first { it.nombre == l.preset }.ancho != null
 
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) { // 2. Más aire
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) { 
             
             Seccion("Lienzo y fondo")
             
-            // Dropdown Tamaño
             CampoLista("Tamaño predefinido", LISTA_PRESETS, l.preset, { l.elegirPreset(it) })
             
-            // 1. Ocultar Ancho y Alto si es un preset fijo, o mostrar Sliders si es Personalizado
             if (!fijo) {
                 Column {
                     Text("Ancho: ${l.ancho}px", fontWeight = FontWeight.Medium)
@@ -187,10 +174,8 @@ private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
                 }
             }
 
-            // Dropdown Tipo de Fondo
             CampoLista("Tipo de fondo", FONDOS, l.fondoTipo, { l.fondoTipo = it })
             
-            // Dropdowns de Color dependiendo del fondo
             if (l.fondoTipo == "Imagen") {
                 OutlinedButton(onClick = { selector.launch("image/*") }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                     Text("Cargar imagen de fondo")
@@ -205,10 +190,6 @@ private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
         }
     }
 }
-
-// ============================================================
-// EL RESTO DE TUS FUNCIONES (PanelCapas, EstiloEditor, etc.)
-// ============================================================
 
 @Composable
 private fun PanelCapas(vm: AppViewModel) {
