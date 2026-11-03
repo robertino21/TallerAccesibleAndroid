@@ -3,18 +3,18 @@ package com.example.talleraccesible
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -30,7 +30,7 @@ fun PantallaTexto(vm: AppViewModel) {
             .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp), // Más aire entre bloques
     ) {
         // Título de la app
         Text(
@@ -38,10 +38,10 @@ fun PantallaTexto(vm: AppViewModel) {
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 4.dp)
         )
 
-        // Selector de modo (Simple/Capas) en tarjeta
+        // Selector de modo
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
                 CampoLista("Modo", MODOS_TEXTO, t.modo, { t.modo = it })
@@ -52,9 +52,6 @@ fun PantallaTexto(vm: AppViewModel) {
     }
 }
 
-// ============================================================
-// MODO SIMPLE (REDISEÑADO CON CARDS)
-// ============================================================
 @Composable
 private fun PanelSimple(vm: AppViewModel) {
     val env = vm.entorno
@@ -62,7 +59,7 @@ private fun PanelSimple(vm: AppViewModel) {
     val importar = rememberImportadorFuentes(vm)
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
 
-    // Tarjeta de texto y botón pegar
+    // 1 y 3. TARJETA DE TEXTO Y BOTÓN PEGAR
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.Top) {
@@ -74,7 +71,8 @@ private fun PanelSimple(vm: AppViewModel) {
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(12.dp))
+                // 4. Botón Pegar Azul Oscuro
                 Button(
                     onClick = {
                         val textoPortapapeles = clipboard.getText()?.text ?: ""
@@ -82,18 +80,32 @@ private fun PanelSimple(vm: AppViewModel) {
                         env.decir("Texto pegado")
                     },
                     modifier = Modifier.padding(top = 8.dp),
-                    shape = RoundedCornerShape(8.dp)
-                ) { Text("Pegar") }
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) { 
+                    Icon(Icons.Default.ContentPaste, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Pegar") 
+                }
             }
-            Spacer(Modifier.height(12.dp))
-            CampoCheck("Ajustar tamaño automáticamente", s.auto, { s.auto = it })
+            // 3. Checkbox separado con más aire
+            Spacer(Modifier.height(20.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = s.auto,
+                    onCheckedChange = { s.auto = it },
+                    modifier = Modifier.semantics { contentDescription = "Ajustar texto a la imagen" }
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Ajustar tamaño automáticamente", fontSize = 16.sp)
+            }
         }
     }
 
-    // Tarjeta de Lienzo y Fondo
-    LienzoEditor(s.lienzo) { env.decir(it) }
+    // 2. LIENZO Y FONDO (Agrupado y con Sliders para Ancho/Alto)
+    LienzoEditorModerno(s.lienzo) { env.decir(it) }
 
-    // Tarjeta de Estilo del texto (fuentes, colores, bordes)
+    // TARJETA DE ESTILO
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
             EstiloEditor(
@@ -101,7 +113,7 @@ private fun PanelSimple(vm: AppViewModel) {
                 onRecargar = { vm.recargarFuentes() }, onImportar = importar,
             )
             
-            // SLIDER para el tamaño
+            // SLIDER para el tamaño de la fuente (ya lo teníamos)
             Text("Tamaño del texto: ${s.estilo.tam}pt", fontWeight = FontWeight.Medium)
             Slider(
                 value = s.estilo.tam.toFloat(),
@@ -112,7 +124,7 @@ private fun PanelSimple(vm: AppViewModel) {
         }
     }
 
-    // Tarjeta de Posición
+    // TARJETA DE POSICIÓN
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
             Seccion("Posición")
@@ -131,8 +143,73 @@ private fun PanelSimple(vm: AppViewModel) {
 }
 
 // ============================================================
-// MODO CAPAS (Mantenido original)
+// LIENZO MODERNO (Con Sliders y ocultando Ancho/Alto)
 // ============================================================
+@Composable
+private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
+    val ctx = LocalContext.current
+    val selector = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            l.fondoUri = uri
+            l.fondoNombre = Imagenes.nombre(ctx, uri)
+            decir("Fondo cargado")
+        }
+    }
+    val fijo = PRESETS.first { it.nombre == l.preset }.ancho != null
+
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) { // 2. Más aire
+            
+            Seccion("Lienzo y fondo")
+            
+            // Dropdown Tamaño
+            CampoLista("Tamaño predefinido", LISTA_PRESETS, l.preset, { l.elegirPreset(it) })
+            
+            // 1. Ocultar Ancho y Alto si es un preset fijo, o mostrar Sliders si es Personalizado
+            if (!fijo) {
+                Column {
+                    Text("Ancho: ${l.ancho}px", fontWeight = FontWeight.Medium)
+                    Slider(
+                        value = l.ancho.toFloat(),
+                        onValueChange = { l.ancho = it.toInt() },
+                        valueRange = 100f..4000f,
+                        modifier = Modifier.semantics { contentDescription = "Ancho en píxeles, valor actual ${l.ancho}" }
+                    )
+                }
+                Column {
+                    Text("Alto: ${l.alto}px", fontWeight = FontWeight.Medium)
+                    Slider(
+                        value = l.alto.toFloat(),
+                        onValueChange = { l.alto = it.toInt() },
+                        valueRange = 100f..4000f,
+                        modifier = Modifier.semantics { contentDescription = "Alto en píxeles, valor actual ${l.alto}" }
+                    )
+                }
+            }
+
+            // Dropdown Tipo de Fondo
+            CampoLista("Tipo de fondo", FONDOS, l.fondoTipo, { l.fondoTipo = it })
+            
+            // Dropdowns de Color dependiendo del fondo
+            if (l.fondoTipo == "Imagen") {
+                OutlinedButton(onClick = { selector.launch("image/*") }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text("Cargar imagen de fondo")
+                }
+                Text(if (l.fondoNombre.isEmpty()) "Sin fondo" else "Fondo: ${l.fondoNombre}")
+            } else {
+                CampoLista("Color de fondo", LISTA_COLORES, l.color1, { l.color1 = it })
+                if (l.fondoTipo.contains("Degradado")) {
+                    CampoLista("Segundo color del degradado", LISTA_COLORES, l.color2, { l.color2 = it })
+                }
+            }
+        }
+    }
+}
+
+// ============================================================
+// EL RESTO DE TUS FUNCIONES (PanelCapas, EstiloEditor, etc.)
+// ============================================================
+
 @Composable
 private fun PanelCapas(vm: AppViewModel) {
     val env = vm.entorno
@@ -148,7 +225,7 @@ private fun PanelCapas(vm: AppViewModel) {
         if (uri != null) imagenPendiente = uri
     }
 
-    LienzoEditor(c.lienzo) { env.decir(it) }
+    LienzoEditorModerno(c.lienzo) { env.decir(it) }
 
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
@@ -165,7 +242,7 @@ private fun PanelCapas(vm: AppViewModel) {
                             Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 48.dp)
-                                .selectable(selected = marcada, role = Role.RadioButton, onClick = { c.seleccion = i })
+                                .selectable(selected = marcada, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = { c.seleccion = i })
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -246,43 +323,6 @@ private fun PanelCapas(vm: AppViewModel) {
                 onAceptar = { c.renombrar(it, env); dlgRenombrar = false },
                 onCancelar = { dlgRenombrar = false },
             )
-        }
-    }
-}
-
-// ============================================================
-// COMPONENTES REUTILIZABLES
-// ============================================================
-@Composable
-private fun LienzoEditor(l: LienzoState, decir: (String) -> Unit) {
-    val ctx = LocalContext.current
-    val selector = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        if (uri != null) {
-            l.fondoUri = uri
-            l.fondoNombre = Imagenes.nombre(ctx, uri)
-            decir("Fondo cargado")
-        }
-    }
-    val fijo = PRESETS.first { it.nombre == l.preset }.ancho != null
-
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Seccion("Lienzo y fondo")
-            CampoLista("Tamaño predefinido", LISTA_PRESETS, l.preset, { l.elegirPreset(it) })
-            CampoNumero("Ancho en píxeles", l.ancho, 100..4000, { l.ancho = it }, enabled = !fijo, paso = 10)
-            CampoNumero("Alto en píxeles", l.alto, 100..4000, { l.alto = it }, enabled = !fijo, paso = 10)
-            CampoLista("Tipo de fondo", FONDOS, l.fondoTipo, { l.fondoTipo = it })
-            if (l.fondoTipo == "Imagen") {
-                OutlinedButton(onClick = { selector.launch("image/*") }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                    Text("Cargar imagen de fondo")
-                }
-                Text(if (l.fondoNombre.isEmpty()) "Sin fondo" else "Fondo: ${l.fondoNombre}")
-            } else {
-                CampoLista("Color de fondo", LISTA_COLORES, l.color1, { l.color1 = it })
-                if (l.fondoTipo.contains("Degradado")) {
-                    CampoLista("Segundo color del degradado", LISTA_COLORES, l.color2, { l.color2 = it })
-                }
-            }
         }
     }
 }
