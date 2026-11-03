@@ -194,16 +194,42 @@ class TextoState {
     fun limpiar(env: Entorno) = if (modo == "Simple") simple.limpiar(env) else capas.limpiar(env)
 }
 
-// --- LAS CLASES QUE BORRÉ POR ERROR (AHORA VUELVEN PARA NO ROMPER PANTALLASBASICAS) ---
 class CortadorState {
+    var nombre by mutableStateOf("")
+    var ancho by mutableIntStateOf(0)
+    var alto by mutableIntStateOf(0)
+    var izq by mutableIntStateOf(0)
+    var der by mutableIntStateOf(0)
+    var arr by mutableIntStateOf(0)
+    var aba by mutableIntStateOf(0)
+    var mostrada by mutableStateOf<Resultado?>(null)
+    var ocupado by mutableStateOf(false)
+    // Nota: Si en PantallasBasicas.kt se usa "resultado" en vez de "mostrada", avisame y lo cambio.
+
     fun recortar(env: Entorno) {}
     fun limpiar(env: Entorno) {}
+    fun describir(env: Entorno) {}
 }
+
 class NormalizarState {
+    val fotos = mutableStateListOf<Uri>()
+    var modo by mutableStateOf(MODOS_NORMALIZAR[0])
+    var resumen by mutableStateOf<String?>(null)
+    var resultado by mutableStateOf<Resultado?>(null) // Restaurado por si PantallasBasicas lo usa
+    var ocupado by mutableStateOf(false)
+
+    fun agregar(env: Entorno, uris: List<Uri>) {}
     fun hacer(env: Entorno) {}
     fun limpiar(env: Entorno) {}
 }
+
 class CollageState {
+    val fotos = mutableStateListOf<Uri>()
+    var tipo by mutableStateOf(TIPOS_COLLAGE[0])
+    var resultado by mutableStateOf<Resultado?>(null)
+    var ocupado by mutableStateOf(false)
+
+    fun agregar(env: Entorno, uris: List<Uri>) {}
     fun crear(env: Entorno) {}
     fun limpiar(env: Entorno) {}
 }
