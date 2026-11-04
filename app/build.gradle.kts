@@ -16,8 +16,22 @@ android {
         versionName = "1.0"
     }
 
+    // 1. AGREGAMOS LA CONFIGURACIÓN DE LA FIRMA ACÁ
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("../debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release { isMinifyEnabled = false }
+        // 2. ASIGNAMOS LA FIRMA AL MODO DEBUG
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("debug")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
