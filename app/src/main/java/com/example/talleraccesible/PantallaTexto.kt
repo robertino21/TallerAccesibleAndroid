@@ -94,13 +94,11 @@ private fun PanelSimple(vm: AppViewModel) {
         }
     }
 
-    // SOLO EL BOTÓN DE GENERAR (Sin botón de copiar)
     Button(
         onClick = { s.generar(env) },
         modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp)
     ) { Text("Generar Imagen", fontSize = 18.sp) }
     
-    // VISTA PREVIA INTEGRADA
     VistaPreviaConZoom(s.resultado)
 }
 
@@ -219,7 +217,7 @@ private fun PanelCapas(vm: AppViewModel) {
         onGenerar = { c.generar(env) }, onLimpiar = { c.limpiar(env) }, decir = { env.decir(it) },
         textoLimpiar = "Limpiar capas",
     )
-    VistaPreviaConZoom(c.resultado) // También agregué el zoom para el modo capas
+    VistaPreviaConZoom(c.resultado)
 
     if (dlgTexto) {
         DialogoNombre(
@@ -267,7 +265,6 @@ private fun EstiloEditor(
         OutlinedButton(onClick = onImportar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Importar fuente") }
     }
     
-    // Cambiados a Sliders
     CampoSlider("Interlineado", e.inter, 0..100, { onChange(e.copy(inter = it)) }, paso = 1)
     CampoLista("Color del texto", colores, e.colorTexto, { onChange(e.copy(colorTexto = it)) })
     CampoLista("Alineación", if (permitirSin) ALINEACIONES_SIN else ALINEACIONES, e.align, { onChange(e.copy(align = it)) })
@@ -302,6 +299,7 @@ private fun rememberImportadorFuentes(vm: AppViewModel): () -> Unit {
     return { selector.launch("*/*") }
 }
 
+// FUNCIÓN CORREGIDA (Asumiendo que 'Resultado' tiene una propiedad llamada 'imagen' o 'bitmap')
 @Composable
 private fun VistaPreviaConZoom(resultado: Resultado?) {
     if (resultado != null) {
@@ -316,8 +314,11 @@ private fun VistaPreviaConZoom(resultado: Resultado?) {
                 )
                 Spacer(Modifier.height(8.dp))
                 Box(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp), contentAlignment = Alignment.Center) {
+                    // ACÁ ESTÁ LA CORRECCIÓN: Cambiamos .bitmap por .imagen (o el que uses)
+                    // Si tu clase Resultado usa .salida, cambialo por .salida
                     Image(
-                        bitmap = resultado.bitmap.asImageBitmap(), contentDescription = resultado.descripcion,
+                        bitmap = resultado.imagen.asImageBitmap(), // <-- OJO ACÁ
+                        contentDescription = resultado.descripcion,
                         modifier = Modifier.fillMaxWidth().graphicsLayer(scaleX = zoom, scaleY = zoom)
                     )
                 }
@@ -327,7 +328,7 @@ private fun VistaPreviaConZoom(resultado: Resultado?) {
     }
 }
 
-// SLIDER GENÉRICO (Reemplaza a los botones - / +)
+// SLIDER GENÉRICO
 @Composable
 fun CampoSlider(etiqueta: String, valor: Int, rango: IntRange, onValor: (Int) -> Unit, paso: Int = 1) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
