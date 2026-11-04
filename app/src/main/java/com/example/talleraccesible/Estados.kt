@@ -263,12 +263,43 @@ class NormalizarState {
     val fotos = mutableStateListOf<Uri>()
     var modo by mutableStateOf(MODOS_NORMALIZAR[0])
     var resumen by mutableStateOf<String?>(null)
-    var resultado by mutableStateOf<Resultado?>(null) // Restaurado por si PantallasBasicas lo usa
     var ocupado by mutableStateOf(false)
 
-    fun agregar(env: Entorno, uris: List<Uri>) {}
-    fun hacer(env: Entorno) {}
-    fun limpiar(env: Entorno) {}
+    fun agregar(env: Entorno, uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        fotos.addAll(uris)
+        env.decir("${fotos.size} fotos")
+    }
+
+    fun hacer(env: Entorno) {
+        if (fotos.isEmpty()) { env.decir("Agrega fotos"); return }
+        if (ocupado) return
+        val lista = fotos.toList(); val m = modo
+        val tam = if (m.contains("800")) 800 else 1080
+        env.decir("Normalizando ${lista.size} fotos")
+        env.ejecutar({ ocupado = it }, "Error al normalizar") {
+            val fallidas = withContext(Dispatchers.Default) {
+                var fallos = 0
+                for (uri in lista) {
+                    try {
+                        val src = Imagenes.cargar(env.app, uri, 6000).bitmap
+                        val fin = if (m.startsWith("Proporci")) Render.proporcion(src, tam) else Render.cuadradoCentro(src, tam)
+                        val base = Imagenes.nombre(env.app, uri).substringBeforeLast('.') + "_norm"
+                        Almacen.guardar(env.app, fin, "Normalizadas", base, false)
+                    } catch (ex: Exception) {
+                        Log.e("TallerAccesible", "normalizar", ex); fallos++
+                    }
+                }
+                fallos
+            }
+            val ok = lista.size - fallidas
+            val msg = "Normalizadas $ok de ${lista.size} fotos" + if (fallidas > 0) ". $fallidas con error" else ""
+            resumen = msg
+            env.decir(msg)
+        }
+    }
+
+    fun limpiar(env: Entorno) { fotos.clear(); resumen = null; env.decir("Limpiado") }
 }
 
 class CollageState {
@@ -304,16 +335,16 @@ class CollageState {
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     val entorno = Entorno(app, viewModelScope)
     var tab by mutableIntStateOf(0)
-    
-    // Tema oscuro: null = sistema, true = oscuro, false = claro
     var forzarOscuro by mutableStateOf<Boolean?>(null)
 
     var fuentes by mutableStateOf(Fuentes.listar(app))
         private set
 
+    // VARIABLES PARA LAS PLANTILLAS
+    var plantillas by mutableStateOf<List<String>>(emptyList())
+        private set
+
     val texto = TextoState()
-    
-    // Restauramos las variables para PantallasBasicas.kt
     val cortador = CortadorState()
     val normalizar = NormalizarState()
     val collage = CollageState()
@@ -330,4 +361,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun generarActual() = texto.generar(entorno)
     fun limpiarActual() = texto.limpiar(entorno)
+
+    fun guardarPlantilla(nombre: String) {
+        if (nombre.isBlank()) return
+        plantillas = plantillas + nombre
+        entorno.decir("Plantilla $nombre guardada")
+    }
 }

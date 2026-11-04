@@ -3,6 +3,7 @@ package com.example.talleraccesible
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -13,7 +14,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -24,21 +28,11 @@ import androidx.compose.ui.unit.sp
 fun PantallaTexto(vm: AppViewModel) {
     val t = vm.texto
     Column(
-        Modifier
-            .fillMaxSize()
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+        Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text(
-            text = "Taller Accesible",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
-
+        Text("Taller Accesible", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
                 CampoLista("Modo", MODOS_TEXTO, t.modo, { t.modo = it })
@@ -60,34 +54,19 @@ private fun PanelSimple(vm: AppViewModel) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 OutlinedTextField(
-                    value = s.texto,
-                    onValueChange = { s.texto = it },
+                    value = s.texto, onValueChange = { s.texto = it },
                     modifier = Modifier.weight(1f).heightIn(min = 120.dp).semantics { contentDescription = "Escribe tu texto aquí" },
-                    placeholder = { Text("Escribe tu texto aquí...") },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
+                    placeholder = { Text("Escribe tu texto aquí...") }, shape = RoundedCornerShape(12.dp)
                 )
                 Spacer(Modifier.width(12.dp))
                 Button(
-                    onClick = {
-                        val textoPortapapeles = clipboard.getText()?.text ?: ""
-                        s.texto = textoPortapapeles
-                        env.decir("Texto pegado")
-                    },
-                    modifier = Modifier.padding(top = 8.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) { 
-                    Text("Pegar") 
-                }
+                    onClick = { s.texto = clipboard.getText()?.text ?: ""; env.decir("Texto pegado") },
+                    modifier = Modifier.padding(top = 8.dp), shape = RoundedCornerShape(8.dp)
+                ) { Text("Pegar") }
             }
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = s.auto,
-                    onCheckedChange = { s.auto = it },
-                    modifier = Modifier.semantics { contentDescription = "Ajustar texto a la imagen" }
-                )
+                Checkbox(checked = s.auto, onCheckedChange = { s.auto = it })
                 Spacer(Modifier.width(8.dp))
                 Text("Ajustar tamaño automáticamente", fontSize = 16.sp)
             }
@@ -97,18 +76,10 @@ private fun PanelSimple(vm: AppViewModel) {
     LienzoEditorModerno(s.lienzo) { env.decir(it) }
 
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             EstiloEditor(
                 e = s.estilo, onChange = { s.estilo = it }, fuentes = vm.fuentes, permitirSin = false,
                 onRecargar = { vm.recargarFuentes() }, onImportar = importar,
-            )
-            
-            Text("Tamaño del texto: ${s.estilo.tam}pt", fontWeight = FontWeight.Medium)
-            Slider(
-                value = s.estilo.tam.toFloat(),
-                onValueChange = { s.estilo = s.estilo.copy(tam = it.toInt()) },
-                valueRange = 10f..200f,
-                modifier = Modifier.semantics { contentDescription = "Tamaño del texto, valor actual ${s.estilo.tam}" }
             )
         }
     }
@@ -118,64 +89,42 @@ private fun PanelSimple(vm: AppViewModel) {
             Seccion("Posición")
             CampoLista("Posición vertical", POSICIONES, s.pos, { s.pos = it })
             if (s.pos.startsWith("Personalizada")) {
-                CampoNumero("Posición vertical, por ciento", s.yPct, 0..100, { s.yPct = it }, paso = 5)
+                CampoSlider("Posición vertical (%)", s.yPct, 0..100, { s.yPct = it }, paso = 1)
             }
         }
     }
 
-    BotonesResultado(
-        textoGenerar = "Generar", resultado = s.resultado, ocupado = s.ocupado,
-        onGenerar = { s.generar(env) }, onLimpiar = { s.limpiar(env) }, decir = { env.decir(it) },
-    )
-    VistaPrevia(s.resultado)
+    // SOLO EL BOTÓN DE GENERAR (Sin botón de copiar)
+    Button(
+        onClick = { s.generar(env) },
+        modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp)
+    ) { Text("Generar Imagen", fontSize = 18.sp) }
+    
+    // VISTA PREVIA INTEGRADA
+    VistaPreviaConZoom(s.resultado)
 }
 
 @Composable
 private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
     val ctx = LocalContext.current
     val selector = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        if (uri != null) {
-            l.fondoUri = uri
-            l.fondoNombre = Imagenes.nombre(ctx, uri)
-            decir("Fondo cargado")
-        }
+        if (uri != null) { l.fondoUri = uri; l.fondoNombre = Imagenes.nombre(ctx, uri); decir("Fondo cargado") }
     }
     val fijo = PRESETS.first { it.nombre == l.preset }.ancho != null
 
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) { 
-            
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) { 
             Seccion("Lienzo y fondo")
-            
             CampoLista("Tamaño predefinido", LISTA_PRESETS, l.preset, { l.elegirPreset(it) })
             
             if (!fijo) {
-                Column {
-                    Text("Ancho: ${l.ancho}px", fontWeight = FontWeight.Medium)
-                    Slider(
-                        value = l.ancho.toFloat(),
-                        onValueChange = { l.ancho = it.toInt() },
-                        valueRange = 100f..4000f,
-                        modifier = Modifier.semantics { contentDescription = "Ancho en píxeles, valor actual ${l.ancho}" }
-                    )
-                }
-                Column {
-                    Text("Alto: ${l.alto}px", fontWeight = FontWeight.Medium)
-                    Slider(
-                        value = l.alto.toFloat(),
-                        onValueChange = { l.alto = it.toInt() },
-                        valueRange = 100f..4000f,
-                        modifier = Modifier.semantics { contentDescription = "Alto en píxeles, valor actual ${l.alto}" }
-                    )
-                }
+                CampoSlider("Ancho (px)", l.ancho, 100..4000, { l.ancho = it }, paso = 10)
+                CampoSlider("Alto (px)", l.alto, 100..4000, { l.alto = it }, paso = 10)
             }
 
             CampoLista("Tipo de fondo", FONDOS, l.fondoTipo, { l.fondoTipo = it })
-            
             if (l.fondoTipo == "Imagen") {
-                OutlinedButton(onClick = { selector.launch("image/*") }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                    Text("Cargar imagen de fondo")
-                }
+                OutlinedButton(onClick = { selector.launch("image/*") }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Cargar imagen de fondo") }
                 Text(if (l.fondoNombre.isEmpty()) "Sin fondo" else "Fondo: ${l.fondoNombre}")
             } else {
                 CampoLista("Color de fondo", LISTA_COLORES, l.color1, { l.color1 = it })
@@ -252,14 +201,14 @@ private fun PanelCapas(vm: AppViewModel) {
                         fuentes = vm.fuentes, permitirSin = true,
                         onRecargar = { vm.recargarFuentes() }, onImportar = importar,
                     )
-                    CampoNumero("Posición horizontal, por ciento", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 5)
-                    CampoNumero("Posición vertical, por ciento", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 5)
+                    CampoSlider("Posición horizontal, por ciento", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
+                    CampoSlider("Posición vertical, por ciento", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
                 }
                 is CapaImagen -> {
                     Seccion("Propiedades de la capa ${capa.nombre}")
-                    CampoNumero("Escala, por ciento", capa.escala, 10..300, { c.actualizar(capa.copy(escala = it)) }, paso = 10)
-                    CampoNumero("Posición horizontal, por ciento", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 5)
-                    CampoNumero("Posición vertical, por ciento", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 5)
+                    CampoSlider("Escala, por ciento", capa.escala, 10..300, { c.actualizar(capa.copy(escala = it)) }, paso = 5)
+                    CampoSlider("Posición horizontal, por ciento", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
+                    CampoSlider("Posición vertical, por ciento", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
                 }
             }
         }
@@ -270,7 +219,7 @@ private fun PanelCapas(vm: AppViewModel) {
         onGenerar = { c.generar(env) }, onLimpiar = { c.limpiar(env) }, decir = { env.decir(it) },
         textoLimpiar = "Limpiar capas",
     )
-    VistaPrevia(c.resultado)
+    VistaPreviaConZoom(c.resultado) // También agregué el zoom para el modo capas
 
     if (dlgTexto) {
         DialogoNombre(
@@ -317,29 +266,31 @@ private fun EstiloEditor(
         OutlinedButton(onClick = onRecargar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Recargar fuentes") }
         OutlinedButton(onClick = onImportar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Importar fuente") }
     }
-    CampoNumero("Interlineado", e.inter, 0..100, { onChange(e.copy(inter = it)) })
+    
+    // Cambiados a Sliders
+    CampoSlider("Interlineado", e.inter, 0..100, { onChange(e.copy(inter = it)) }, paso = 1)
     CampoLista("Color del texto", colores, e.colorTexto, { onChange(e.copy(colorTexto = it)) })
     CampoLista("Alineación", if (permitirSin) ALINEACIONES_SIN else ALINEACIONES, e.align, { onChange(e.copy(align = it)) })
 
     CampoCheck("Borde", e.borde, { onChange(e.copy(borde = it)) })
     if (e.borde) {
         CampoLista("Color del borde", LISTA_COLORES_SIN, e.colorBorde, { onChange(e.copy(colorBorde = it)) })
-        CampoNumero("Grosor del borde", e.grosor, 0..20, { onChange(e.copy(grosor = it)) })
+        CampoSlider("Grosor del borde", e.grosor, 0..20, { onChange(e.copy(grosor = it)) }, paso = 1)
     }
 
     CampoCheck("Sombra", e.sombra, { onChange(e.copy(sombra = it)) })
     if (e.sombra) {
         CampoLista("Color de la sombra", LISTA_COLORES_SIN, e.colorSombra, { onChange(e.copy(colorSombra = it)) })
-        CampoNumero("Desplazamiento horizontal de la sombra", e.sx, -50..50, { onChange(e.copy(sx = it)) })
-        CampoNumero("Desplazamiento vertical de la sombra", e.sy, -50..50, { onChange(e.copy(sy = it)) })
-        CampoNumero("Desenfoque de la sombra", e.blur, 0..20, { onChange(e.copy(blur = it)) })
+        CampoSlider("Desplazamiento horizontal de la sombra", e.sx, -50..50, { onChange(e.copy(sx = it)) }, paso = 1)
+        CampoSlider("Desplazamiento vertical de la sombra", e.sy, -50..50, { onChange(e.copy(sy = it)) }, paso = 1)
+        CampoSlider("Desenfoque de la sombra", e.blur, 0..20, { onChange(e.copy(blur = it)) }, paso = 1)
     }
 
     CampoCheck("Caja detrás del texto", e.caja, { onChange(e.copy(caja = it)) })
     if (e.caja) {
         CampoLista("Color de la caja", colores, e.colorCaja, { onChange(e.copy(colorCaja = it)) })
-        CampoNumero("Relleno de la caja", e.padding, 0..200, { onChange(e.copy(padding = it)) }, paso = 5)
-        CampoNumero("Radio de las esquinas de la caja", e.radio, 0..100, { onChange(e.copy(radio = it)) })
+        CampoSlider("Relleno de la caja", e.padding, 0..200, { onChange(e.copy(padding = it)) }, paso = 5)
+        CampoSlider("Radio de las esquinas de la caja", e.radio, 0..100, { onChange(e.copy(radio = it)) }, paso = 1)
     }
 }
 
@@ -349,4 +300,42 @@ private fun rememberImportadorFuentes(vm: AppViewModel): () -> Unit {
         if (uri != null) vm.importarFuente(uri)
     }
     return { selector.launch("*/*") }
+}
+
+@Composable
+private fun VistaPreviaConZoom(resultado: Resultado?) {
+    if (resultado != null) {
+        var zoom by remember { mutableStateOf(1f) }
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Vista Previa", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("Zoom: ${(zoom * 100).toInt()}%", fontSize = 14.sp)
+                Slider(
+                    value = zoom, onValueChange = { zoom = it }, valueRange = 0.5f..3f,
+                    modifier = Modifier.semantics { contentDescription = "Zoom de la imagen, valor actual ${(zoom * 100).toInt()} por ciento" }
+                )
+                Spacer(Modifier.height(8.dp))
+                Box(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp), contentAlignment = Alignment.Center) {
+                    Image(
+                        bitmap = resultado.bitmap.asImageBitmap(), contentDescription = resultado.descripcion,
+                        modifier = Modifier.fillMaxWidth().graphicsLayer(scaleX = zoom, scaleY = zoom)
+                    )
+                }
+                Text(resultado.descripcion, fontSize = 14.sp)
+            }
+        }
+    }
+}
+
+// SLIDER GENÉRICO (Reemplaza a los botones - / +)
+@Composable
+fun CampoSlider(etiqueta: String, valor: Int, rango: IntRange, onValor: (Int) -> Unit, paso: Int = 1) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Text("$etiqueta: $valor", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+        Slider(
+            value = valor.toFloat(), onValueChange = { onValor(it.toInt()) },
+            valueRange = rango.first.toFloat()..rango.last.toFloat(),
+            modifier = Modifier.semantics { contentDescription = "$etiqueta, valor actual $valor" }
+        )
+    }
 }

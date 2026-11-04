@@ -30,9 +30,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val vm: AppViewModel = viewModel()
-            // Si querés que respete el tema del sistema, dejalo así.
-            // Si agregás el switch más adelante, le pasás vm.forzarOscuro.
-            TemaTaller(forzarOscuro = null) { Raiz(vm) }
+            TemaTaller(forzarOscuro = vm.forzarOscuro) { Raiz(vm) }
         }
     }
 }
@@ -53,9 +51,9 @@ fun TemaTaller(forzarOscuro: Boolean?, contenido: @Composable () -> Unit) {
     }
 }
 
-// TUS 4 PESTAÑAS ORIGINALES
-private val TITULOS = listOf("Cortador", "Normalizar", "Collage", "Texto")
-private val ICONOS = listOf(Icons.Default.Create, Icons.Default.Settings, Icons.Default.Build, Icons.Default.Edit)
+// TUS 4 PESTAÑAS ORIGINALES + LA DE AJUSTES
+private val TITULOS = listOf("Cortador", "Normalizar", "Collage", "Texto", "Ajustes")
+private val ICONOS = listOf(Icons.Default.Create, Icons.Default.Settings, Icons.Default.Build, Icons.Default.Edit, Icons.Default.Settings)
 
 @Composable
 fun Raiz(vm: AppViewModel = viewModel()) {
@@ -92,7 +90,8 @@ fun Raiz(vm: AppViewModel = viewModel()) {
                 0 -> PantallaCortador(vm)
                 1 -> PantallaNormalizar(vm)
                 2 -> PantallaCollage(vm)
-                else -> PantallaTexto(vm) // Esta es la que rediseñamos
+                3 -> PantallaTexto(vm) 
+                4 -> PantallaAjustes(vm) // La pestaña nueva
             }
         }
     }
@@ -105,6 +104,7 @@ private fun atajo(ev: KeyEvent, vm: AppViewModel): Boolean {
         Key.Two -> { vm.tab = 1; true }
         Key.Three -> { vm.tab = 2; true }
         Key.Four -> { vm.tab = 3; true }
+        Key.Five -> { vm.tab = 4; true }
         Key.G -> { vm.generarActual(); true }
         Key.L -> { vm.limpiarActual(); true }
         else -> false
