@@ -1,5 +1,4 @@
 package com.example.talleraccesible
-
 import android.app.Application
 import android.net.Uri
 import android.util.Log
@@ -84,10 +83,12 @@ class SimpleState {
         env.ejecutar({ ocupado = it }, "Error al generar la imagen") {
             val r = withContext(Dispatchers.Default) {
                 val s = Render.simple(env.app, t, l, e, p, y, a)
-                Almacen.publicar(env.app, s, "Texto", "imagen_texto", "Texto: ${t.take(150)}")
+                // CAMBIO ACÁ: Guardamos en temporal en lugar de publicar
+                val uri = Almacen.guardarTemporal(env.app, s.bitmap)
+                Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa generada", s.avisos)
             }
             resultado = r
-            env.decir("Imagen guardada en Imágenes, Taller Accesible")
+            env.decir("Vista previa lista. Puedes compartirla o guardarla.")
         }
     }
 
@@ -170,11 +171,12 @@ class CapasState {
         env.ejecutar({ ocupado = it }, "Error al generar las capas") {
             val r = withContext(Dispatchers.Default) {
                 val s = Render.capas(env.app, l, lista)
-                Almacen.publicar(env.app, s, "Texto", "capas", "Imagen de ${lista.size} capas")
+                // CAMBIO ACÁ: Guardamos en temporal
+                val uri = Almacen.guardarTemporal(env.app, s.bitmap)
+                Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa de capas", s.avisos)
             }
             resultado = r
-            val extra = if (r.avisos.isEmpty()) "" else ". " + r.avisos.joinToString(". ")
-            env.decir("Capas guardadas en Imágenes, Taller Accesible$extra")
+            env.decir("Vista previa de capas lista.")
         }
     }
 
@@ -196,15 +198,11 @@ class TextoState {
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     val entorno = Entorno(app, viewModelScope)
     var tab by mutableIntStateOf(0)
-    
     var forzarOscuro by mutableStateOf<Boolean?>(null)
-
     var fuentes by mutableStateOf(Fuentes.listar(app))
         private set
-
     var plantillas by mutableStateOf<List<String>>(emptyList())
         private set
-
     val texto = TextoState()
 
     fun recargarFuentes(mensaje: String = "Fuentes recargadas") {
@@ -224,5 +222,31 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (nombre.isBlank()) return
         plantillas = plantillas + nombre
         entorno.decir("Plantilla $nombre guardada")
+    }
+
+    fun guardarActualEnGaleria() {
+        val r = texto.simple.resultado ?: texto.capas.resultado
+        if (r == null || r.uri == null) {
+            entorno.decir("Primero genera una imagen")
+            return
+        }
+        // Ejecutamos en segundo plano para no trabar la pantalla
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val uriNueva = Almacen.guardarEnGaleria(
+                    getApplication(), 
+                    r.uri, 
+                    "Texto", 
+                    "imagen_taller"
+                )
+                withContext(Dispatchers.Main) {
+                    entorno.decir("Imagen guardada en la galería")
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    entorno.decir("Error al guardar en la galería")
+                }
+            }
+        }
     }
 }

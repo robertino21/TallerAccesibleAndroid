@@ -1,5 +1,4 @@
 package com.example.talleraccesible
-
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
@@ -45,7 +44,6 @@ object Fuentes {
     fun listar(ctx: Context): List<String> {
         val m = LinkedHashMap<String, () -> Typeface>()
         m[FUENTE_DEF] = { Typeface.DEFAULT }
-
         runCatching {
             ctx.assets.list("fuentes")?.filter { esFuente(it) }?.sorted()?.forEach { f ->
                 val n = f.substringBeforeLast('.')
@@ -62,7 +60,6 @@ object Fuentes {
                 val n = f.nameWithoutExtension
                 if (n !in m) m[n] = { Typeface.createFromFile(f) }
             }
-
         origen = m
         cache.clear()
         return m.keys.toList()
@@ -177,5 +174,25 @@ object Almacen {
         ctx.startActivity(
             Intent.createChooser(envio, "Compartir imagen").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
+    }
+
+    /** Guarda la imagen en la caché temporal (NO en la galería). Devuelve la URI. */
+    fun guardarTemporal(ctx: Context, bmp: Bitmap): Uri {
+        val archivo = File(ctx.cacheDir, "preview_taller.jpg")
+        archivo.outputStream().use { salida ->
+            bmp.compress(Bitmap.CompressFormat.JPEG, 95, salida)
+        }
+        // Para compartir por WhatsApp en Android moderno, necesitamos un FileProvider
+        return androidx.core.content.FileProvider.getUriForFile(
+            ctx,
+            "${ctx.packageName}.fileprovider",
+            archivo
+        )
+    }
+
+    /** Copia la imagen temporal a la galería definitiva. */
+    fun guardarEnGaleria(ctx: Context, uriTemporal: Uri, carpeta: String, base: String): Uri {
+        val bmp = android.provider.MediaStore.Images.Media.getBitmap(ctx.contentResolver, uriTemporal)
+        return guardar(ctx, bmp, carpeta, base, false)
     }
 }

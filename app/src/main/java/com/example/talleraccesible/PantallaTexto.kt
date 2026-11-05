@@ -44,7 +44,7 @@ private fun PanelSimple(vm: AppViewModel) {
     val s = vm.texto.simple
     val importar = rememberImportadorFuentes(vm)
     val clipboard = LocalClipboardManager.current
-    val context = LocalContext.current // Para compartir
+    val context = LocalContext.current 
     
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
          Column(Modifier.padding(16.dp)) {
@@ -95,27 +95,31 @@ private fun PanelSimple(vm: AppViewModel) {
          }
      }
      
-     // BOTONERA: GENERAR Y COMPARTIR
+     // BOTONERA: GENERAR, COMPARTIR Y GUARDAR
      Row(
          modifier = Modifier.fillMaxWidth(),
          horizontalArrangement = Arrangement.spacedBy(8.dp)
      ) {
          Button(
-             onClick = { s.generar(env) }, 
+             onClick = { s.generar(env) },
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
-         ) { Text("Generar", fontSize = 16.sp) }
+         ) { Text("Generar", fontSize = 14.sp) }
+         
          Button(
              onClick = { 
-                 val r = s.resultado
-                 if (r != null && r.uri != null) {
-                     Almacen.compartir(context, r.uri)
-                 } else {
-                     env.decir("Primero genera una imagen")
-                 }
+                 if (s.resultado?.uri != null) Almacen.compartir(context, s.resultado!!.uri!!)
+                 else env.decir("Primero genera una imagen")
              },
-             enabled = s.resultado != null, 
+             enabled = s.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
-         ) { Text("Compartir", fontSize = 16.sp) }
+         ) { Text("Compartir", fontSize = 14.sp) }
+
+         // NUEVO BOTÓN DE GUARDAR
+         Button(
+             onClick = { vm.guardarActualEnGaleria() },
+             enabled = s.resultado != null,
+             modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
+         ) { Text("Guardar", fontSize = 14.sp) }
      }
 }
 
@@ -214,7 +218,7 @@ private fun PanelCapas(vm: AppViewModel) {
          }
      }
      
-     // BOTONERA DE CAPAS (GENERAR Y COMPARTIR)
+     // BOTONERA DE CAPAS (GENERAR, COMPARTIR Y GUARDAR)
      Row(
          modifier = Modifier.fillMaxWidth(),
          horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -222,7 +226,8 @@ private fun PanelCapas(vm: AppViewModel) {
          Button(
              onClick = { c.generar(env) },
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
-         ) { Text("Generar", fontSize = 16.sp) }
+         ) { Text("Generar", fontSize = 14.sp) }
+         
          Button(
              onClick = { 
                  val r = c.resultado
@@ -231,7 +236,14 @@ private fun PanelCapas(vm: AppViewModel) {
              },
              enabled = c.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
-         ) { Text("Compartir", fontSize = 16.sp) }
+         ) { Text("Compartir", fontSize = 14.sp) }
+
+         // NUEVO BOTÓN DE GUARDAR
+         Button(
+             onClick = { vm.guardarActualEnGaleria() },
+             enabled = c.resultado != null,
+             modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
+         ) { Text("Guardar", fontSize = 14.sp) }
      }
      
      if (dlgTexto) {
