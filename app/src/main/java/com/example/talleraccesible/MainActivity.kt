@@ -9,10 +9,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -51,9 +50,9 @@ fun TemaTaller(forzarOscuro: Boolean?, contenido: @Composable () -> Unit) {
     }
 }
 
-// TUS 4 PESTAÑAS ORIGINALES + LA DE AJUSTES
-private val TITULOS = listOf("Cortador", "Normalizar", "Collage", "Texto", "Ajustes")
-private val ICONOS = listOf(Icons.Default.Create, Icons.Default.Settings, Icons.Default.Build, Icons.Default.Edit, Icons.Default.Settings)
+// SOLO 3 PESTAÑAS
+private val TITULOS = listOf("Editor", "Vista previa", "Ajustes")
+private val ICONOS = listOf(Icons.Default.Edit, Icons.Default.Visibility, Icons.Default.Settings)
 
 @Composable
 fun Raiz(vm: AppViewModel = viewModel()) {
@@ -87,11 +86,9 @@ fun Raiz(vm: AppViewModel = viewModel()) {
     ) { margen ->
         Box(Modifier.padding(margen)) {
             when (vm.tab) {
-                0 -> PantallaCortador(vm)
-                1 -> PantallaNormalizar(vm)
-                2 -> PantallaCollage(vm)
-                3 -> PantallaTexto(vm) 
-                4 -> PantallaAjustes(vm) // La pestaña nueva
+                0 -> PantallaTexto(vm) 
+                1 -> PantallaVistaPrevia(vm) // La crearemos abajo
+                2 -> PantallaAjustes(vm)     // La crearemos abajo
             }
         }
     }
@@ -103,9 +100,10 @@ private fun atajo(ev: KeyEvent, vm: AppViewModel): Boolean {
         Key.One -> { vm.tab = 0; true }
         Key.Two -> { vm.tab = 1; true }
         Key.Three -> { vm.tab = 2; true }
-        Key.Four -> { vm.tab = 3; true }
-        Key.Five -> { vm.tab = 4; true }
-        Key.G -> { vm.generarActual(); true }
+        Key.G -> { 
+            if (vm.tab == 0) { vm.generarActual(); vm.tab = 1 } 
+            true 
+        }
         Key.L -> { vm.limpiarActual(); true }
         else -> false
     }

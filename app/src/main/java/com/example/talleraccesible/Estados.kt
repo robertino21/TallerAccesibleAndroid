@@ -1,7 +1,6 @@
 package com.example.talleraccesible
 
 import android.app.Application
-import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -194,160 +193,19 @@ class TextoState {
     fun limpiar(env: Entorno) = if (modo == "Simple") simple.limpiar(env) else capas.limpiar(env)
 }
 
-class CortadorState {
-    var nombre by mutableStateOf("")
-    var ancho by mutableIntStateOf(0)
-    var alto by mutableIntStateOf(0)
-    var izq by mutableIntStateOf(0)
-    var der by mutableIntStateOf(0)
-    var arr by mutableIntStateOf(0)
-    var aba by mutableIntStateOf(0)
-    var mostrada by mutableStateOf<Resultado?>(null)
-    var ocupado by mutableStateOf(false)
-    private var bitmap: Bitmap? = null
-
-    fun cargar(env: Entorno, uri: Uri) {
-        env.ejecutar({ ocupado = it }, "No se pudo cargar la foto") {
-            val (bmp, n) = withContext(Dispatchers.IO) {
-                Imagenes.cargar(env.app, uri, 6000).bitmap to Imagenes.nombre(env.app, uri)
-            }
-            bitmap = bmp; nombre = n; ancho = bmp.width; alto = bmp.height
-            mostrada = Resultado(Imagenes.vista(bmp), null, "Foto cargada, ${bmp.width} por ${bmp.height} píxeles")
-            env.decir("Foto cargada, ${bmp.width} por ${bmp.height} píxeles")
-        }
-    }
-
-    private fun rectangulo(): IntArray? {
-        val bmp = bitmap ?: return null
-        val x0 = bmp.width * izq / 100
-        val x1 = bmp.width - bmp.width * der / 100
-        val y0 = bmp.height * arr / 100
-        val y1 = bmp.height - bmp.height * aba / 100
-        return intArrayOf(x0, y0, x1 - x0, y1 - y0)
-    }
-
-    fun recortar(env: Entorno) {
-        val bmp = bitmap ?: run { env.decir("Carga una foto"); return }
-        val r = rectangulo()!!
-        if (r[2] < 1 || r[3] < 1) {
-            env.decir("Los recortes se superponen. Reduce algún porcentaje"); return
-        }
-        if (ocupado) return
-        env.ejecutar({ ocupado = it }, "Error al recortar") {
-            val res = withContext(Dispatchers.Default) {
-                val rec = Bitmap.createBitmap(bmp, r[0], r[1], r[2], r[3])
-                Almacen.publicar(env.app, Salida(rec, rec.hasAlpha()), "Recortadas", "foto_recortada", "Foto recortada")
-            }
-            mostrada = res
-            env.decir("Guardada, ${r[2]} por ${r[3]} píxeles")
-        }
-    }
-
-    fun describir(env: Entorno) {
-        if (bitmap == null) { env.decir("Sin foto"); return }
-        val r = rectangulo()!!
-        env.decir(
-            "Izquierda $izq por ciento, derecha $der, arriba $arr, abajo $aba. " +
-                if (r[2] > 0 && r[3] > 0) "La foto quedará de ${r[2]} por ${r[3]} píxeles" else "Los recortes se superponen",
-        )
-    }
-
-    fun limpiar(env: Entorno) {
-        bitmap = null; nombre = ""; ancho = 0; alto = 0
-        izq = 0; der = 0; arr = 0; aba = 0; mostrada = null
-        env.decir("Limpio")
-    }
-}
-
-class NormalizarState {
-    val fotos = mutableStateListOf<Uri>()
-    var modo by mutableStateOf(MODOS_NORMALIZAR[0])
-    var resumen by mutableStateOf<String?>(null)
-    var ocupado by mutableStateOf(false)
-
-    fun agregar(env: Entorno, uris: List<Uri>) {
-        if (uris.isEmpty()) return
-        fotos.addAll(uris)
-        env.decir("${fotos.size} fotos")
-    }
-
-    fun hacer(env: Entorno) {
-        if (fotos.isEmpty()) { env.decir("Agrega fotos"); return }
-        if (ocupado) return
-        val lista = fotos.toList(); val m = modo
-        val tam = if (m.contains("800")) 800 else 1080
-        env.decir("Normalizando ${lista.size} fotos")
-        env.ejecutar({ ocupado = it }, "Error al normalizar") {
-            val fallidas = withContext(Dispatchers.Default) {
-                var fallos = 0
-                for (uri in lista) {
-                    try {
-                        val src = Imagenes.cargar(env.app, uri, 6000).bitmap
-                        val fin = if (m.startsWith("Proporci")) Render.proporcion(src, tam) else Render.cuadradoCentro(src, tam)
-                        val base = Imagenes.nombre(env.app, uri).substringBeforeLast('.') + "_norm"
-                        Almacen.guardar(env.app, fin, "Normalizadas", base, false)
-                    } catch (ex: Exception) {
-                        Log.e("TallerAccesible", "normalizar", ex); fallos++
-                    }
-                }
-                fallos
-            }
-            val ok = lista.size - fallidas
-            val msg = "Normalizadas $ok de ${lista.size} fotos" + if (fallidas > 0) ". $fallidas con error" else ""
-            resumen = msg
-            env.decir(msg)
-        }
-    }
-
-    fun limpiar(env: Entorno) { fotos.clear(); resumen = null; env.decir("Limpiado") }
-}
-
-class CollageState {
-    val fotos = mutableStateListOf<Uri>()
-    var tipo by mutableStateOf(TIPOS_COLLAGE[0])
-    var resultado by mutableStateOf<Resultado?>(null)
-    var ocupado by mutableStateOf(false)
-
-    fun agregar(env: Entorno, uris: List<Uri>) {
-        if (uris.isEmpty()) return
-        fotos.addAll(uris)
-        env.decir("${fotos.size} fotos" + if (fotos.size > 4) ". Solo se usarán las primeras 4" else "")
-    }
-
-    fun crear(env: Entorno) {
-        if (fotos.isEmpty()) { env.decir("Agrega foto"); return }
-        if (ocupado) return
-        val lista = fotos.take(4); val t = tipo
-        env.ejecutar({ ocupado = it }, "Error al crear el collage") {
-            val r = withContext(Dispatchers.Default) {
-                val imgs = lista.map { Render.cuadradoCentro(Imagenes.cargar(env.app, it, 4096).bitmap, 600) }
-                val c = Render.collage(imgs, t)
-                Almacen.publicar(env.app, Salida(c, false), "Collages", "collage_final", "Collage de ${imgs.size} fotos, tipo $t")
-            }
-            resultado = r
-            env.decir("Collage creado")
-        }
-    }
-
-    fun limpiar(env: Entorno) { fotos.clear(); resultado = null; env.decir("Limpiado") }
-}
-
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     val entorno = Entorno(app, viewModelScope)
     var tab by mutableIntStateOf(0)
+    
     var forzarOscuro by mutableStateOf<Boolean?>(null)
 
     var fuentes by mutableStateOf(Fuentes.listar(app))
         private set
 
-    // VARIABLES PARA LAS PLANTILLAS
     var plantillas by mutableStateOf<List<String>>(emptyList())
         private set
 
     val texto = TextoState()
-    val cortador = CortadorState()
-    val normalizar = NormalizarState()
-    val collage = CollageState()
 
     fun recargarFuentes(mensaje: String = "Fuentes recargadas") {
         fuentes = Fuentes.listar(getApplication())

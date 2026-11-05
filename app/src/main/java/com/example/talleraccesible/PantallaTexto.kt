@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -95,11 +94,9 @@ private fun PanelSimple(vm: AppViewModel) {
     }
 
     Button(
-        onClick = { s.generar(env) },
+        onClick = { s.generar(env); vm.tab = 1 }, // Salta a vista previa
         modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp)
     ) { Text("Generar Imagen", fontSize = 18.sp) }
-    
-    VistaPreviaConZoom(s.resultado)
 }
 
 @Composable
@@ -157,15 +154,13 @@ private fun PanelCapas(vm: AppViewModel) {
             if (c.capas.isEmpty()) {
                 Text("Sin capas")
             } else {
-                Text("El orden de la lista es el orden de dibujo: la primera capa queda al fondo.")
+                Text("El orden de la lista es el orden de dibujo.")
                 Column(Modifier.selectableGroup()) {
                     c.capas.forEachIndexed { i, capa ->
                         val marcada = i == c.seleccion
-                        val tipo = if (capa is CapaTexto) "capa de texto" else "capa de imagen"
+                        val tipo = if (capa is CapaTexto) "texto" else "imagen"
                         Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp)
+                            Modifier.fillMaxWidth().heightIn(min = 48.dp)
                                 .selectable(selected = marcada, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = { c.seleccion = i })
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -183,160 +178,162 @@ private fun PanelCapas(vm: AppViewModel) {
             BotonAccion("Agregar capa de imagen", { selectorImagen.launch("image/*") }, principal = false)
             BotonAccion("Renombrar capa", { dlgRenombrar = true }, enabled = haySeleccion, principal = false)
             BotonAccion("Eliminar capa", { c.eliminar(env) }, enabled = haySeleccion, principal = false)
-            BotonAccion("Subir capa en la lista", { c.mover(-1, env) }, enabled = haySeleccion, principal = false)
-            BotonAccion("Bajar capa en la lista", { c.mover(1, env) }, enabled = haySeleccion, principal = false)
 
             when (val capa = c.capaActual) {
-                null -> Text("Agrega o selecciona una capa para editar sus propiedades")
+                null -> Text("Agrega o selecciona una capa")
                 is CapaTexto -> {
-                    Seccion("Propiedades de la capa ${capa.nombre}")
-                    CampoTexto(
-                        "Contenido de la capa", capa.contenido,
-                        { c.actualizar(capa.copy(contenido = it)) }, lineas = 3,
-                    )
-                    EstiloEditor(
-                        e = capa.estilo, onChange = { c.actualizar(capa.copy(estilo = it)) },
-                        fuentes = vm.fuentes, permitirSin = true,
-                        onRecargar = { vm.recargarFuentes() }, onImportar = importar,
-                    )
-                    CampoSlider("Posición horizontal, por ciento", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
-                    CampoSlider("Posición vertical, por ciento", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
+                    Seccion("Propiedades de ${capa.nombre}")
+                    CampoTexto("Contenido", capa.contenido, { c.actualizar(capa.copy(contenido = it)) }, lineas = 3)
+                    EstiloEditor(e = capa.estilo, onChange = { c.actualizar(capa.copy(estilo = it)) }, fuentes = vm.fuentes, permitirSin = true, onRecargar = { vm.recargarFuentes() }, onImportar = importar)
+                    CampoSlider("Posición X (%)", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
+                    CampoSlider("Posición Y (%)", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
                 }
                 is CapaImagen -> {
-                    Seccion("Propiedades de la capa ${capa.nombre}")
-                    CampoSlider("Escala, por ciento", capa.escala, 10..300, { c.actualizar(capa.copy(escala = it)) }, paso = 5)
-                    CampoSlider("Posición horizontal, por ciento", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
-                    CampoSlider("Posición vertical, por ciento", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
+                    Seccion("Propiedades de ${capa.nombre}")
+                    CampoSlider("Escala (%)", capa.escala, 10..300, { c.actualizar(capa.copy(escala = it)) }, paso = 5)
+                    CampoSlider("Posición X (%)", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
+                    CampoSlider("Posición Y (%)", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
                 }
             }
         }
     }
 
-    BotonesResultado(
-        textoGenerar = "Generar capas", resultado = c.resultado, ocupado = c.ocupado,
-        onGenerar = { c.generar(env) }, onLimpiar = { c.limpiar(env) }, decir = { env.decir(it) },
-        textoLimpiar = "Limpiar capas",
-    )
-    VistaPreviaConZoom(c.resultado)
+    Button(
+        onClick = { c.generar(env); vm.tab = 1 }, // Salta a vista previa
+        modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp)
+    ) { Text("Generar Capas", fontSize = 18.sp) }
 
     if (dlgTexto) {
-        DialogoNombre(
-            titulo = "Nueva capa de texto", inicial = "",
-            validar = { c.errorNombre(it) },
-            onAceptar = { c.agregarTexto(it, env); dlgTexto = false },
-            onCancelar = { dlgTexto = false },
-        )
+        DialogoNombre("Nueva capa de texto", "", { c.errorNombre(it) }, { c.agregarTexto(it, env); dlgTexto = false }, { dlgTexto = false })
     }
     imagenPendiente?.let { uri ->
-        DialogoNombre(
-            titulo = "Nueva capa de imagen",
-            inicial = Imagenes.nombre(ctx, uri).substringBeforeLast('.'),
-            validar = { c.errorNombre(it) },
-            onAceptar = { c.agregarImagen(it, uri, env); imagenPendiente = null },
-            onCancelar = { imagenPendiente = null },
-        )
+        DialogoNombre("Nueva capa de imagen", Imagenes.nombre(ctx, uri).substringBeforeLast('.'), { c.errorNombre(it) }, { c.agregarImagen(it, uri, env); imagenPendiente = null }, { imagenPendiente = null })
     }
     if (dlgRenombrar) {
         val actual = c.capaActual
-        if (actual == null) {
-            dlgRenombrar = false
-        } else {
-            DialogoNombre(
-                titulo = "Renombrar capa", inicial = actual.nombre,
-                validar = { c.errorNombre(it, ignorar = c.seleccion) },
-                onAceptar = { c.renombrar(it, env); dlgRenombrar = false },
-                onCancelar = { dlgRenombrar = false },
-            )
-        }
+        if (actual == null) dlgRenombrar = false
+        else DialogoNombre("Renombrar capa", actual.nombre, { c.errorNombre(it, ignorar = c.seleccion) }, { c.renombrar(it, env); dlgRenombrar = false }, { dlgRenombrar = false })
     }
 }
 
 @Composable
-private fun EstiloEditor(
-    e: EstiloUi, onChange: (EstiloUi) -> Unit, fuentes: List<String>, permitirSin: Boolean, onRecargar: () -> Unit, onImportar: () -> Unit,
-) {
+private fun EstiloEditor(e: EstiloUi, onChange: (EstiloUi) -> Unit, fuentes: List<String>, permitirSin: Boolean, onRecargar: () -> Unit, onImportar: () -> Unit) {
     val listaFuentes = if (permitirSin) listOf(SIN) + fuentes else fuentes
     val colores = if (permitirSin) LISTA_COLORES_SIN else LISTA_COLORES
 
     Seccion("Estilo del texto")
     CampoLista("Fuente", listaFuentes, e.fuente, { onChange(e.copy(fuente = it)) })
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = onRecargar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Recargar fuentes") }
-        OutlinedButton(onClick = onImportar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Importar fuente") }
+        OutlinedButton(onClick = onRecargar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Recargar") }
+        OutlinedButton(onClick = onImportar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Importar") }
     }
-    
-    CampoSlider("Interlineado", e.inter, 0..100, { onChange(e.copy(inter = it)) }, paso = 1)
+    CampoSlider("Interlineado", e.inter, 0..100, { onChange(e.copy(inter = it)) })
     CampoLista("Color del texto", colores, e.colorTexto, { onChange(e.copy(colorTexto = it)) })
     CampoLista("Alineación", if (permitirSin) ALINEACIONES_SIN else ALINEACIONES, e.align, { onChange(e.copy(align = it)) })
 
     CampoCheck("Borde", e.borde, { onChange(e.copy(borde = it)) })
     if (e.borde) {
         CampoLista("Color del borde", LISTA_COLORES_SIN, e.colorBorde, { onChange(e.copy(colorBorde = it)) })
-        CampoSlider("Grosor del borde", e.grosor, 0..20, { onChange(e.copy(grosor = it)) }, paso = 1)
+        CampoSlider("Grosor", e.grosor, 0..20, { onChange(e.copy(grosor = it)) })
     }
-
     CampoCheck("Sombra", e.sombra, { onChange(e.copy(sombra = it)) })
     if (e.sombra) {
         CampoLista("Color de la sombra", LISTA_COLORES_SIN, e.colorSombra, { onChange(e.copy(colorSombra = it)) })
-        CampoSlider("Desplazamiento horizontal de la sombra", e.sx, -50..50, { onChange(e.copy(sx = it)) }, paso = 1)
-        CampoSlider("Desplazamiento vertical de la sombra", e.sy, -50..50, { onChange(e.copy(sy = it)) }, paso = 1)
-        CampoSlider("Desenfoque de la sombra", e.blur, 0..20, { onChange(e.copy(blur = it)) }, paso = 1)
+        CampoSlider("Desplazamiento X", e.sx, -50..50, { onChange(e.copy(sx = it)) })
+        CampoSlider("Desplazamiento Y", e.sy, -50..50, { onChange(e.copy(sy = it)) })
+        CampoSlider("Desenfoque", e.blur, 0..20, { onChange(e.copy(blur = it)) })
     }
-
-    CampoCheck("Caja detrás del texto", e.caja, { onChange(e.copy(caja = it)) })
+    CampoCheck("Caja de fondo", e.caja, { onChange(e.copy(caja = it)) })
     if (e.caja) {
         CampoLista("Color de la caja", colores, e.colorCaja, { onChange(e.copy(colorCaja = it)) })
-        CampoSlider("Relleno de la caja", e.padding, 0..200, { onChange(e.copy(padding = it)) }, paso = 5)
-        CampoSlider("Radio de las esquinas de la caja", e.radio, 0..100, { onChange(e.copy(radio = it)) }, paso = 1)
+        CampoSlider("Relleno", e.padding, 0..200, { onChange(e.copy(padding = it)) }, paso = 5)
+        CampoSlider("Radio esquinas", e.radio, 0..100, { onChange(e.copy(radio = it)) })
     }
 }
 
 @Composable
 private fun rememberImportadorFuentes(vm: AppViewModel): () -> Unit {
-    val selector = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        if (uri != null) vm.importarFuente(uri)
-    }
+    val selector = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? -> if (uri != null) vm.importarFuente(uri) }
     return { selector.launch("*/*") }
 }
 
-// FUNCIÓN CORREGIDA (Asumiendo que 'Resultado' tiene una propiedad llamada 'imagen' o 'bitmap')
-@Composable
-private fun VistaPreviaConZoom(resultado: Resultado?) {
-    if (resultado != null) {
-        var zoom by remember { mutableStateOf(1f) }
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Vista Previa", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text("Zoom: ${(zoom * 100).toInt()}%", fontSize = 14.sp)
-                Slider(
-                    value = zoom, onValueChange = { zoom = it }, valueRange = 0.5f..3f,
-                    modifier = Modifier.semantics { contentDescription = "Zoom de la imagen, valor actual ${(zoom * 100).toInt()} por ciento" }
-                )
-                Spacer(Modifier.height(8.dp))
-                Box(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp), contentAlignment = Alignment.Center) {
-                    // ACÁ ESTÁ LA CORRECCIÓN: Cambiamos .bitmap por .imagen (o el que uses)
-                    // Si tu clase Resultado usa .salida, cambialo por .salida
-                    Image(
-                        bitmap = resultado.imagen.asImageBitmap(), // <-- OJO ACÁ
-                        contentDescription = resultado.descripcion,
-                        modifier = Modifier.fillMaxWidth().graphicsLayer(scaleX = zoom, scaleY = zoom)
-                    )
-                }
-                Text(resultado.descripcion, fontSize = 14.sp)
-            }
-        }
-    }
-}
-
-// SLIDER GENÉRICO
 @Composable
 fun CampoSlider(etiqueta: String, valor: Int, rango: IntRange, onValor: (Int) -> Unit, paso: Int = 1) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text("$etiqueta: $valor", fontWeight = FontWeight.Medium, fontSize = 16.sp)
-        Slider(
-            value = valor.toFloat(), onValueChange = { onValor(it.toInt()) },
-            valueRange = rango.first.toFloat()..rango.last.toFloat(),
-            modifier = Modifier.semantics { contentDescription = "$etiqueta, valor actual $valor" }
-        )
+        Slider(value = valor.toFloat(), onValueChange = { onValor(it.toInt()) }, valueRange = rango.first.toFloat()..rango.last.toFloat(), modifier = Modifier.semantics { contentDescription = "$etiqueta, valor actual $valor" })
+    }
+}
+
+// ============================================================
+// PESTAÑA DE VISTA PREVIA (AQUÍ USA LA FUNCIÓN ORIGINAL)
+// ============================================================
+@Composable
+fun PantallaVistaPrevia(vm: AppViewModel) {
+    val resultado = vm.texto.simple.resultado ?: vm.texto.capas.resultado
+    var zoom by remember { mutableStateOf(1f) }
+
+    Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("Vista Previa", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        
+        if (resultado != null) {
+            Text("Zoom: ${(zoom * 100).toInt()}%", fontSize = 14.sp)
+            Slider(value = zoom, onValueChange = { zoom = it }, valueRange = 0.5f..3f, modifier = Modifier.semantics { contentDescription = "Zoom de la imagen, valor actual ${(zoom * 100).toInt()} por ciento" })
+            
+            Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(4.dp)) {
+                Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                    // Usamos la función original VistaPrevia() envolviéndola en un gráfico para el zoom
+                    Box(modifier = Modifier.graphicsLayer(scaleX = zoom, scaleY = zoom)) {
+                        VistaPrevia(resultado)
+                    }
+                }
+            }
+        } else {
+            Text("Aún no has generado ninguna imagen.")
+        }
+    }
+}
+
+// ============================================================
+// PESTAÑA DE AJUSTES (AQUÍ ESTÁ LA CONFIGURACIÓN Y PLANTILLAS)
+// ============================================================
+@Composable
+fun PantallaAjustes(vm: AppViewModel) {
+    var nombrePlantilla by remember { mutableStateOf("") }
+    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("Configuración", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        
+        Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Tema de la aplicación", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text("Usar tema oscuro")
+                    Spacer(Modifier.weight(1f))
+                    Switch(checked = vm.forzarOscuro == true, onCheckedChange = { vm.forzarOscuro = it })
+                }
+            }
+        }
+
+        Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Plantillas", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                
+                OutlinedTextField(
+                    value = nombrePlantilla, onValueChange = { nombrePlantilla = it },
+                    label = { Text("Nombre de la plantilla") }, modifier = Modifier.fillMaxWidth()
+                )
+                
+                Button(onClick = { vm.guardarPlantilla(nombrePlantilla); nombrePlantilla = "" }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Guardar plantilla")
+                }
+
+                if (vm.plantillas.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("Tus plantillas:", fontWeight = FontWeight.Medium)
+                    Text("Tienes ${vm.plantillas.size} plantillas guardadas.", fontSize = 14.sp)
+                }
+            }
+        }
     }
 }
