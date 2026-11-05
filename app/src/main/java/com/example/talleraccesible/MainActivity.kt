@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -50,9 +50,9 @@ fun TemaTaller(forzarOscuro: Boolean?, contenido: @Composable () -> Unit) {
     }
 }
 
-// SOLO 3 PESTAÑAS
+// LAS 3 PESTAÑAS (Usando iconos que ya sabemos que existen)
 private val TITULOS = listOf("Editor", "Vista previa", "Ajustes")
-private val ICONOS = listOf(Icons.Default.Edit, Icons.Default.Image, Icons.Default.Settings)
+private val ICONOS = listOf(Icons.Default.Edit, Icons.Default.Home, Icons.Default.Settings)
 
 @Composable
 fun Raiz(vm: AppViewModel = viewModel()) {
@@ -87,8 +87,8 @@ fun Raiz(vm: AppViewModel = viewModel()) {
         Box(Modifier.padding(margen)) {
             when (vm.tab) {
                 0 -> PantallaTexto(vm) 
-                1 -> PantallaVistaPrevia(vm) // La crearemos abajo
-                2 -> PantallaAjustes(vm)     // La crearemos abajo
+                1 -> PantallaVistaPrevia(vm) 
+                2 -> PantallaAjustes(vm)     
             }
         }
     }
