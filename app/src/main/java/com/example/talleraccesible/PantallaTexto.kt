@@ -3,7 +3,6 @@ package com.example.talleraccesible
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -14,8 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -48,6 +45,7 @@ private fun PanelSimple(vm: AppViewModel) {
     val s = vm.texto.simple
     val importar = rememberImportadorFuentes(vm)
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val context = LocalContext.current // Para compartir
 
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
@@ -93,10 +91,30 @@ private fun PanelSimple(vm: AppViewModel) {
         }
     }
 
-    Button(
-        onClick = { s.generar(env); vm.tab = 1 }, // Salta a vista previa
-        modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp)
-    ) { Text("Generar Imagen", fontSize = 18.sp) }
+    // BOTONERA: GENERAR Y COMPARTIR
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Button(
+            onClick = { s.generar(env) }, 
+            modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
+        ) { Text("Generar", fontSize = 16.sp) }
+        
+        Button(
+            onClick = { 
+                val r = s.resultado
+                if (r != null && r.uri != null) {
+                    // Usamos la función que YA TENÍAS en tu Recursos.kt
+                    Almacen.compartir(context, r.uri)
+                } else {
+                    env.decir("Primero genera una imagen")
+                }
+            },
+            enabled = s.resultado != null, 
+            modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
+        ) { Text("Compartir", fontSize = 16.sp) }
+    }
 }
 
 @Composable
@@ -198,10 +216,26 @@ private fun PanelCapas(vm: AppViewModel) {
         }
     }
 
-    Button(
-        onClick = { c.generar(env); vm.tab = 1 }, // Salta a vista previa
-        modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp)
-    ) { Text("Generar Capas", fontSize = 18.sp) }
+    // BOTONERA DE CAPAS (GENERAR Y COMPARTIR)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Button(
+            onClick = { c.generar(env) },
+            modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
+        ) { Text("Generar", fontSize = 16.sp) }
+        
+        Button(
+            onClick = { 
+                val r = c.resultado
+                if (r != null && r.uri != null) Almacen.compartir(ctx, r.uri)
+                else env.decir("Primero genera una imagen")
+            },
+            enabled = c.resultado != null,
+            modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
+        ) { Text("Compartir", fontSize = 16.sp) }
+    }
 
     if (dlgTexto) {
         DialogoNombre("Nueva capa de texto", "", { c.errorNombre(it) }, { c.agregarTexto(it, env); dlgTexto = false }, { dlgTexto = false })
@@ -261,17 +295,22 @@ private fun rememberImportadorFuentes(vm: AppViewModel): () -> Unit {
 fun CampoSlider(etiqueta: String, valor: Int, rango: IntRange, onValor: (Int) -> Unit, paso: Int = 1) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text("$etiqueta: $valor", fontWeight = FontWeight.Medium, fontSize = 16.sp)
-        Slider(value = valor.toFloat(), onValueChange = { onValor(it.toInt()) }, valueRange = rango.first.toFloat()..rango.last.toFloat(), modifier = Modifier.semantics { contentDescription = "$etiqueta, valor actual $valor" })
+        val cantidadPasos = ((rango.last - rango.first) / paso) - 1
+        Slider(
+            value = valor.toFloat(),
+            onValueChange = { onValor(it.toInt()) },
+            valueRange = rango.first.toFloat()..rango.last.toFloat(),
+            steps = if (cantidadPasos > 0) cantidadPasos else 0, 
+            modifier = Modifier.semantics { contentDescription = "$etiqueta, valor actual $valor" }
+        )
     }
 }
 
-// ============================================================
-// PESTAÑA DE VISTA PREVIA (AQUÍ USA LA FUNCIÓN ORIGINAL)
-// ============================================================
 @Composable
 fun PantallaVistaPrevia(vm: AppViewModel) {
     val resultado = vm.texto.simple.resultado ?: vm.texto.capas.resultado
     var zoom by remember { mutableStateOf(1f) }
+    val context = LocalContext.current
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Vista Previa", fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -282,24 +321,30 @@ fun PantallaVistaPrevia(vm: AppViewModel) {
             
             Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(4.dp)) {
                 Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
-                    // Usamos la función original VistaPrevia() envolviéndola en un gráfico para el zoom
                     Box(modifier = Modifier.graphicsLayer(scaleX = zoom, scaleY = zoom)) {
                         VistaPrevia(resultado)
                     }
                 }
             }
+            
+            // Botón de compartir también acá en la vista previa
+            Button(
+                onClick = { if (resultado.uri != null) Almacen.compartir(context, resultado.uri!!) },
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) { Text("Compartir Imagen") }
+
         } else {
             Text("Aún no has generado ninguna imagen.")
         }
     }
 }
 
-// ============================================================
-// PESTAÑA DE AJUSTES (AQUÍ ESTÁ LA CONFIGURACIÓN Y PLANTILLAS)
-// ============================================================
 @Composable
 fun PantallaAjustes(vm: AppViewModel) {
     var nombrePlantilla by remember { mutableStateOf("") }
+    var expandido by remember { mutableStateOf(false) }
+    var plantillaSeleccionada by remember { mutableStateOf("Seleccionar plantilla...") }
+
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Configuración", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         
@@ -324,14 +369,39 @@ fun PantallaAjustes(vm: AppViewModel) {
                     label = { Text("Nombre de la plantilla") }, modifier = Modifier.fillMaxWidth()
                 )
                 
-                Button(onClick = { vm.guardarPlantilla(nombrePlantilla); nombrePlantilla = "" }, modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = { vm.guardarPlantilla(nombrePlantilla); nombrePlantilla = "" }, 
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("Guardar plantilla")
                 }
 
                 if (vm.plantillas.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
-                    Text("Tus plantillas:", fontWeight = FontWeight.Medium)
-                    Text("Tienes ${vm.plantillas.size} plantillas guardadas.", fontSize = 14.sp)
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { expandido = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(plantillaSeleccionada)
+                        }
+                        DropdownMenu(
+                            expanded = expandido,
+                            onDismissRequest = { expandido = false }
+                        ) {
+                            vm.plantillas.forEach { plantilla ->
+                                DropdownMenuItem(
+                                    text = { Text(plantilla) },
+                                    onClick = {
+                                        plantillaSeleccionada = plantilla
+                                        expandido = false
+                                        vm.entorno.decir("Plantilla $plantilla seleccionada")
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
