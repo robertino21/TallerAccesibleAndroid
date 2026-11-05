@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -52,7 +52,7 @@ fun TemaTaller(forzarOscuro: Boolean?, contenido: @Composable () -> Unit) {
 
 // SOLO 3 PESTAÑAS
 private val TITULOS = listOf("Editor", "Vista previa", "Ajustes")
-private val ICONOS = listOf(Icons.Default.Edit, Icons.Default.Visibility, Icons.Default.Settings)
+private val ICONOS = listOf(Icons.Default.Edit, Icons.Default.Image, Icons.Default.Settings)
 
 @Composable
 fun Raiz(vm: AppViewModel = viewModel()) {
