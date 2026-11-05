@@ -201,8 +201,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var forzarOscuro by mutableStateOf<Boolean?>(null)
     var fuentes by mutableStateOf(Fuentes.listar(app))
         private set
-    var plantillas by mutableStateOf<List<String>>(emptyList())
+    
+    // CAMBIO: Lista de Plantillas en lugar de Strings
+    var plantillas by mutableStateOf<List<Plantilla>>(emptyList())
         private set
+
     val texto = TextoState()
 
     fun recargarFuentes(mensaje: String = "Fuentes recargadas") {
@@ -218,10 +221,32 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun generarActual() = texto.generar(entorno)
     fun limpiarActual() = texto.limpiar(entorno)
 
+    // CAMBIO: Guardar plantilla completa
     fun guardarPlantilla(nombre: String) {
         if (nombre.isBlank()) return
-        plantillas = plantillas + nombre
+        val simple = texto.simple
+        // Guardamos TODO el estado actual del editor simple
+        val nueva = Plantilla(
+            nombre = nombre,
+            estilo = simple.estilo,
+            lienzoAncho = simple.lienzo.ancho,
+            lienzoAlto = simple.lienzo.alto,
+            pos = simple.pos,
+            yPct = simple.yPct
+        )
+        plantillas = plantillas + nueva
         entorno.decir("Plantilla $nombre guardada")
+    }
+
+    // NUEVO: Aplicar plantilla
+    fun aplicarPlantilla(plantilla: Plantilla) {
+        val simple = texto.simple
+        simple.estilo = plantilla.estilo
+        simple.lienzo.ancho = plantilla.lienzoAncho
+        simple.lienzo.alto = plantilla.lienzoAlto
+        simple.pos = plantilla.pos
+        simple.yPct = plantilla.yPct
+        entorno.decir("Plantilla ${plantilla.nombre} aplicada")
     }
 
     fun guardarActualEnGaleria() {

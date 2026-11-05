@@ -1,5 +1,4 @@
 package com.example.talleraccesible
-
 import android.graphics.Color
 import android.net.Uri
 
@@ -16,6 +15,7 @@ val PRESETS = listOf(
     Preset("Portada Facebook 1640x924", 1640, 924),
     Preset("Miniatura YouTube 1280x720", 1280, 720),
 )
+
 val LISTA_PRESETS = PRESETS.map { it.nombre }
 
 /** Mismos colores que la versión de escritorio (ARGB). */
@@ -39,6 +39,7 @@ val COLORES: Map<String, Int> = linkedMapOf(
     "Turquesa" to Color.rgb(64, 224, 208),
     "Transparente" to Color.argb(0, 0, 0, 0),
 )
+
 val LISTA_COLORES = COLORES.keys.toList()
 val LISTA_COLORES_SIN = listOf(SIN) + LISTA_COLORES
 
@@ -76,7 +77,7 @@ data class EstiloUi(
     val align: String = "Centro",
 ) {
     companion object {
-        /** Capas nuevas: todo en "Sin seleccionar" / 0, igual que la versión de escritorio. */
+        /* Capas nuevas: todo en "Sin seleccionar" / 0, igual que la versión de escritorio. */
         fun paraCapa() = EstiloUi(
             fuente = SIN, tam = 0, inter = 0, colorTexto = SIN, grosor = 0,
             sx = 0, sy = 0, blur = 0, colorCaja = SIN, padding = 0, radio = 0, align = SIN,
@@ -113,4 +114,14 @@ data class LienzoSpec(
     val color1: String,
     val color2: String,
     val fondo: Uri?,
+)
+
+// NUEVO: Molde para guardar plantillas completas
+data class Plantilla(
+    val nombre: String,
+    val estilo: EstiloUi,
+    val lienzoAncho: Int,
+    val lienzoAlto: Int,
+    val pos: String,
+    val yPct: Int
 )

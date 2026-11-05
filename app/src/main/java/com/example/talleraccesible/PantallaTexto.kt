@@ -205,14 +205,15 @@ private fun PanelCapas(vm: AppViewModel) {
                      Seccion("Propiedades de ${capa.nombre}")
                      CampoTexto("Contenido", capa.contenido, { c.actualizar(capa.copy(contenido = it)) }, lineas = 3)
                      EstiloEditor(e = capa.estilo, onChange = { c.actualizar(capa.copy(estilo = it)) }, fuentes = vm.fuentes, permitirSin = true, onRecargar = { vm.recargarFuentes() }, onImportar = importar)
-                     CampoSlider("Posición X (%)", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
-                     CampoSlider("Posición Y (%)", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
+                     // CAMBIO: Límites ampliados para posición X e Y
+                     CampoSlider("Posición X (%)", capa.xPct, -50..150, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
+                     CampoSlider("Posición Y (%)", capa.yPct, -50..150, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
                  }
                  is CapaImagen -> {
                      Seccion("Propiedades de ${capa.nombre}")
                      CampoSlider("Escala (%)", capa.escala, 10..300, { c.actualizar(capa.copy(escala = it)) }, paso = 5)
-                     CampoSlider("Posición X (%)", capa.xPct, 0..100, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
-                     CampoSlider("Posición Y (%)", capa.yPct, 0..100, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
+                     CampoSlider("Posición X (%)", capa.xPct, -50..150, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
+                     CampoSlider("Posición Y (%)", capa.yPct, -50..150, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
                  }
              }
          }
@@ -280,13 +281,12 @@ private fun EstiloEditor(
         OutlinedButton(onClick = onImportar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Importar") }
     }
     
-    // NUEVO: Slider de Tamaño
+    // CAMBIO: Rango ampliado para tamaño de texto
     CampoSlider(
         etiqueta = "Tamaño de texto", 
         valor = e.tam, 
-        rango = 24..120, 
+        rango = 10..300, 
         onValor = { onChange(e.copy(tam = it)) },
-        // Si el modo automático está activo, bloqueamos el slider
         habilitado = !autoActivo 
     )
     
@@ -311,8 +311,9 @@ private fun EstiloEditor(
     CampoCheck("Caja de fondo", e.caja, { onChange(e.copy(caja = it)) })
     if (e.caja) {
         CampoLista("Color de la caja", colores, e.colorCaja, { onChange(e.copy(colorCaja = it)) })
-        CampoSlider("Relleno", e.padding, 0..200, { onChange(e.copy(padding = it)) }, paso = 5)
-        CampoSlider("Radio esquinas", e.radio, 0..100, { onChange(e.copy(radio = it)) })
+        // CAMBIO: Rangos ampliados para relleno y radio
+        CampoSlider("Relleno", e.padding, 0..300, { onChange(e.copy(padding = it)) }, paso = 5)
+        CampoSlider("Radio esquinas", e.radio, 0..200, { onChange(e.copy(radio = it)) })
     }
 }
 
@@ -427,11 +428,11 @@ fun PantallaAjustes(vm: AppViewModel) {
                          ) {
                              vm.plantillas.forEach { plantilla ->
                                  DropdownMenuItem(
-                                     text = { Text(plantilla) },
+                                     text = { Text(plantilla.nombre) },
                                      onClick = {
-                                         plantillaSeleccionada = plantilla
+                                         plantillaSeleccionada = plantilla.nombre
                                          expandido = false
-                                         vm.entorno.decir("Plantilla $plantilla seleccionada")
+                                         vm.aplicarPlantilla(plantilla) // <-- APLICA LOS ESTILOS
                                      }
                                  )
                              }
