@@ -1,5 +1,6 @@
 package com.example.talleraccesible
 import android.app.Application
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -9,6 +10,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -49,6 +52,7 @@ class LienzoState {
     var color2 by mutableStateOf("Blanco")
     var fondoUri by mutableStateOf<Uri?>(null)
     var fondoNombre by mutableStateOf("")
+    var opacidadFondo by mutableIntStateOf(100) // NUEVO
 
     fun elegirPreset(nombre: String) {
         preset = nombre
@@ -56,12 +60,13 @@ class LienzoState {
         if (p.ancho != null && p.alto != null) { ancho = p.ancho; alto = p.alto }
     }
 
-    fun snap() = LienzoSpec(ancho, alto, fondoTipo, color1, color2, fondoUri)
+    fun snap() = LienzoSpec(ancho, alto, fondoTipo, color1, color2, fondoUri, opacidadFondo)
 
     fun reset() {
         preset = PRESETS[0].nombre; ancho = 1080; alto = 1080
         fondoTipo = FONDOS[0]; color1 = "Blanco"; color2 = "Blanco"
         fondoUri = null; fondoNombre = ""
+        opacidadFondo = 100 // NUEVO
     }
 }
 
@@ -83,7 +88,6 @@ class SimpleState {
         env.ejecutar({ ocupado = it }, "Error al generar la imagen") {
             val r = withContext(Dispatchers.Default) {
                 val s = Render.simple(env.app, t, l, e, p, y, a)
-                // CAMBIO ACÁ: Guardamos en temporal en lugar de publicar
                 val uri = Almacen.guardarTemporal(env.app, s.bitmap)
                 Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa generada", s.avisos)
             }
@@ -171,7 +175,6 @@ class CapasState {
         env.ejecutar({ ocupado = it }, "Error al generar las capas") {
             val r = withContext(Dispatchers.Default) {
                 val s = Render.capas(env.app, l, lista)
-                // CAMBIO ACÁ: Guardamos en temporal
                 val uri = Almacen.guardarTemporal(env.app, s.bitmap)
                 Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa de capas", s.avisos)
             }
@@ -202,11 +205,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var fuentes by mutableStateOf(Fuentes.listar(app))
         private set
     
-    // CAMBIO: Lista de Plantillas en lugar de Strings
+    // PERSISTENCIA DE PLANTILLAS CON GSON
+    private val prefs = app.getSharedPreferences("taller_prefs", Context.MODE_PRIVATE)
+    private val gson = Gson()
+
     var plantillas by mutableStateOf<List<Plantilla>>(emptyList())
         private set
 
-    val texto = TextoState()
+    init {
+        val json = prefs.getString("plantillas_json", null)
+        if (json != null) {
+            val tipo = object : TypeToken<List<Plantilla>>() {}.type
+            plantillas = gson.fromJson(json, tipo) ?: emptyList()
+        }
+    }
+
+    private fun guardarPlantillasEnMemoria(lista: List<Plantilla>) {
+        plantillas = lista
+        prefs.edit().putString("plantillas_json", gson.toJson(lista)).apply()
+    }
 
     fun recargarFuentes(mensaje: String = "Fuentes recargadas") {
         fuentes = Fuentes.listar(getApplication())
@@ -221,11 +238,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun generarActual() = texto.generar(entorno)
     fun limpiarActual() = texto.limpiar(entorno)
 
-    // CAMBIO: Guardar plantilla completa
     fun guardarPlantilla(nombre: String) {
         if (nombre.isBlank()) return
         val simple = texto.simple
-        // Guardamos TODO el estado actual del editor simple
         val nueva = Plantilla(
             nombre = nombre,
             estilo = simple.estilo,
@@ -234,11 +249,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             pos = simple.pos,
             yPct = simple.yPct
         )
-        plantillas = plantillas + nueva
+        guardarPlantillasEnMemoria(plantillas + nueva)
         entorno.decir("Plantilla $nombre guardada")
     }
 
-    // NUEVO: Aplicar plantilla
+    fun borrarPlantilla(nombre: String) {
+        guardarPlantillasEnMemoria(plantillas.filter { it.nombre != nombre })
+        entorno.decir("Plantilla borrada")
+    }
+
     fun aplicarPlantilla(plantilla: Plantilla) {
         val simple = texto.simple
         simple.estilo = plantilla.estilo
@@ -249,13 +268,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         entorno.decir("Plantilla ${plantilla.nombre} aplicada")
     }
 
+    fun limpiarTodo() {
+        texto.limpiar(entorno)
+        entorno.decir("Lienzo limpiado")
+    }
+
     fun guardarActualEnGaleria() {
         val r = texto.simple.resultado ?: texto.capas.resultado
         if (r == null || r.uri == null) {
             entorno.decir("Primero genera una imagen")
             return
         }
-        // Ejecutamos en segundo plano para no trabar la pantalla
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val uriNueva = Almacen.guardarEnGaleria(

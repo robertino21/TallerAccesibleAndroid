@@ -18,7 +18,6 @@ val PRESETS = listOf(
 
 val LISTA_PRESETS = PRESETS.map { it.nombre }
 
-/** Mismos colores que la versión de escritorio (ARGB). */
 val COLORES: Map<String, Int> = linkedMapOf(
     "Blanco" to Color.rgb(255, 255, 255),
     "Negro" to Color.rgb(0, 0, 0),
@@ -53,10 +52,6 @@ val FONDOS = listOf("Color sólido", "Degradado vertical", "Degradado horizontal
 val MODOS_NORMALIZAR = listOf("Cuadrado 1080", "Cuadrado 800", "Proporción 1080")
 val TIPOS_COLLAGE = listOf("Cuadrícula", "Horizontal", "Vertical")
 
-/**
- * Estilo editable de un texto. Se guardan los NOMBRES de las opciones
- * (así se enlazan directo con los selectores de la interfaz).
- */
 data class EstiloUi(
     val fuente: String = FUENTE_DEF,
     val tam: Int = 80,
@@ -67,7 +62,7 @@ data class EstiloUi(
     val grosor: Int = 2,
     val sombra: Boolean = false,
     val colorSombra: String = SIN,
-    val sombraOpacidad: Int = 100, // <-- AGREGAR ESTO (del 0 al 100 para no usar decimales)
+    val sombraOpacidad: Int = 100,
     val sx: Int = 3,
     val sy: Int = 3,
     val blur: Int = 0,
@@ -78,7 +73,6 @@ data class EstiloUi(
     val align: String = "Centro",
 ) {
     companion object {
-        /* Capas nuevas: todo en "Sin seleccionar" / 0, igual que la versión de escritorio. */
         fun paraCapa() = EstiloUi(
             fuente = SIN, tam = 0, inter = 0, colorTexto = SIN, grosor = 0,
             sx = 0, sy = 0, blur = 0, colorCaja = SIN, padding = 0, radio = 0, align = SIN,
@@ -108,6 +102,7 @@ data class CapaImagen(
     override val yPct: Int = 50,
 ) : Capa
 
+// ACTUALIZADO: Agregamos opacidadFondo
 data class LienzoSpec(
     val ancho: Int,
     val alto: Int,
@@ -115,9 +110,9 @@ data class LienzoSpec(
     val color1: String,
     val color2: String,
     val fondo: Uri?,
+    val opacidadFondo: Int = 100
 )
 
-// NUEVO: Molde para guardar plantillas completas
 data class Plantilla(
     val nombre: String,
     val estilo: EstiloUi,

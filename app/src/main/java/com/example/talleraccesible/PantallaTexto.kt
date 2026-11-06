@@ -9,6 +9,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -95,7 +97,7 @@ private fun PanelSimple(vm: AppViewModel) {
          }
      }
      
-     // BOTONERA: GENERAR, COMPARTIR Y GUARDAR
+     // BOTONERA: GENERAR, COMPARTIR, GUARDAR Y LIMPIAR
      Row(
          modifier = Modifier.fillMaxWidth(),
          horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -119,6 +121,13 @@ private fun PanelSimple(vm: AppViewModel) {
              enabled = s.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Guardar", fontSize = 14.sp) }
+         
+         // Botón Limpiar
+         OutlinedButton(
+             onClick = { vm.limpiarTodo() },
+             modifier = Modifier.height(56.dp), 
+             shape = RoundedCornerShape(12.dp)
+         ) { Text("Limpiar", fontSize = 14.sp) }
      }
 }
 
@@ -139,6 +148,10 @@ private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
                  CampoSlider("Alto (px)", l.alto, 100..4000, { l.alto = it }, paso = 10)
              }
              CampoLista("Tipo de fondo", FONDOS, l.fondoTipo, { l.fondoTipo = it })
+             
+             // Slider de opacidad para cualquier tipo de fondo
+             CampoSlider("Opacidad del fondo", l.opacidadFondo, 0..100, { l.opacidadFondo = it })
+
              if (l.fondoTipo == "Imagen") {
                  OutlinedButton(onClick = { selector.launch("image/*") }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Cargar imagen de fondo") }
                  Text(if (l.fondoNombre.isEmpty()) "Sin fondo" else "Fondo: ${l.fondoNombre}")
@@ -204,7 +217,6 @@ private fun PanelCapas(vm: AppViewModel) {
                      Seccion("Propiedades de ${capa.nombre}")
                      CampoTexto("Contenido", capa.contenido, { c.actualizar(capa.copy(contenido = it)) }, lineas = 3)
                      EstiloEditor(e = capa.estilo, onChange = { c.actualizar(capa.copy(estilo = it)) }, fuentes = vm.fuentes, permitirSin = true, onRecargar = { vm.recargarFuentes() }, onImportar = importar)
-                     // CAMBIO: Límites ampliados para posición X e Y
                      CampoSlider("Posición X (%)", capa.xPct, -50..150, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
                      CampoSlider("Posición Y (%)", capa.yPct, -50..150, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
                  }
@@ -278,7 +290,6 @@ private fun EstiloEditor(
         OutlinedButton(onClick = onImportar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Importar") }
     }
     
-    // CAMBIO: Rango ampliado para tamaño de texto
     CampoSlider(
         etiqueta = "Tamaño de texto", 
         valor = e.tam, 
@@ -304,14 +315,12 @@ private fun EstiloEditor(
         CampoSlider("Desplazamiento Y", e.sy, -50..50, { onChange(e.copy(sy = it)) })
         CampoSlider("Desenfoque", e.blur, 0..20, { onChange(e.copy(blur = it)) })
         
-        // NUEVO SLIDER DE OPACIDAD
         CampoSlider("Opacidad de la sombra (%)", e.sombraOpacidad, 0..100, { onChange(e.copy(sombraOpacidad = it)) })
     }
     
     CampoCheck("Caja de fondo", e.caja, { onChange(e.copy(caja = it)) })
     if (e.caja) {
         CampoLista("Color de la caja", colores, e.colorCaja, { onChange(e.copy(colorCaja = it)) })
-        // CAMBIO: Rangos ampliados para relleno y radio
         CampoSlider("Relleno", e.padding, 0..300, { onChange(e.copy(padding = it)) }, paso = 5)
         CampoSlider("Radio esquinas", e.radio, 0..200, { onChange(e.copy(radio = it)) })
     }
@@ -411,33 +420,50 @@ fun PantallaAjustes(vm: AppViewModel) {
                  ) {
                      Text("Guardar plantilla")
                  }
-                 if (vm.plantillas.isNotEmpty()) {
-                     Spacer(Modifier.height(8.dp))
-                     Box(modifier = Modifier.fillMaxWidth()) {
-                         OutlinedButton(
-                             onClick = { expandido = true },
-                             modifier = Modifier.fillMaxWidth(),
-                             shape = RoundedCornerShape(8.dp)
-                         ) {
-                             Text(plantillaSeleccionada)
-                         }
-                         DropdownMenu(
-                             expanded = expandido,
-                             onDismissRequest = { expandido = false }
-                         ) {
-                             vm.plantillas.forEach { plantilla ->
-                                 DropdownMenuItem(
-                                     text = { Text(plantilla.nombre) },
-                                     onClick = {
-                                         plantillaSeleccionada = plantilla.nombre
-                                         expandido = false
-                                         vm.aplicarPlantilla(plantilla) // <-- APLICA LOS ESTILOS
-                                     }
-                                 )
-                             }
-                         }
-                     }
-                 }
+                 
+                 // DESPLEGABLE Y BOTÓN DE BORRAR
+                if (vm.plantillas.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            OutlinedButton(
+                                onClick = { expandido = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(plantillaSeleccionada)
+                            }
+                            DropdownMenu(
+                                expanded = expandido,
+                                onDismissRequest = { expandido = false }
+                            ) {
+                                vm.plantillas.forEach { plantilla ->
+                                    DropdownMenuItem(
+                                        text = { Text(plantilla.nombre) },
+                                        onClick = {
+                                            plantillaSeleccionada = plantilla.nombre
+                                            expandido = false
+                                            vm.aplicarPlantilla(plantilla)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        // BOTÓN DE ELIMINAR
+                        IconButton(
+                            onClick = { 
+                                if (plantillaSeleccionada != "Seleccionar plantilla...") {
+                                    vm.borrarPlantilla(plantillaSeleccionada)
+                                    plantillaSeleccionada = "Seleccionar plantilla..."
+                                } else {
+                                    vm.entorno.decir("Selecciona una plantilla primero")
+                                }
+                            }
+                        ) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Borrar plantilla")
+                        }
+                    }
+                }
              }
          }
      }
