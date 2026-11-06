@@ -205,6 +205,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var fuentes by mutableStateOf(Fuentes.listar(app))
         private set
     
+    // 👇 AQUÍ ESTÁ LA LÍNEA QUE FALTABA 👇
+    val texto = TextoState()
+
     // PERSISTENCIA DE PLANTILLAS CON GSON
     private val prefs = app.getSharedPreferences("taller_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
