@@ -362,7 +362,9 @@ fun CampoSlider(
 
 @Composable
 fun PantallaVistaPrevia(vm: AppViewModel) {
-    val resultado = vm.texto.simple.resultado ?: vm.texto.capas.resultado
+    // ACÁ ESTÁ EL ARREGLO: Le decimos a Kotlin que es de tipo Resultado?
+    val resultado: Resultado? = vm.texto.simple.resultado ?: vm.texto.capas.resultado
+    
     var zoom by remember { mutableStateOf(1f) }
     val context = LocalContext.current
     
@@ -379,7 +381,7 @@ fun PantallaVistaPrevia(vm: AppViewModel) {
                  }
              }
              Button(
-                 onClick = { if (resultado.uri != null) Almacen.compartir(context, resultado.uri!!) },
+                 onClick = { if (resultado.uri != null) Almacen.compartir(context, resultado.uri) },
                  modifier = Modifier.fillMaxWidth().height(48.dp)
              ) { Text("Compartir Imagen") }
          } else {
