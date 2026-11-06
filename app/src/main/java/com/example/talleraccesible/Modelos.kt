@@ -67,6 +67,7 @@ data class EstiloUi(
     val grosor: Int = 2,
     val sombra: Boolean = false,
     val colorSombra: String = SIN,
+    val sombraOpacidad: Int = 100, // <-- AGREGAR ESTO (del 0 al 100 para no usar decimales)
     val sx: Int = 3,
     val sy: Int = 3,
     val blur: Int = 0,

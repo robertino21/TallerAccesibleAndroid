@@ -80,7 +80,7 @@ private fun PanelSimple(vm: AppViewModel) {
                  permitirSin = false,
                  onRecargar = { vm.recargarFuentes() }, 
                  onImportar = importar,
-                 autoActivo = s.auto // <-- PASAMOS EL ESTADO DEL CHECKBOX
+                 autoActivo = s.auto
              )
          }
      }
@@ -114,7 +114,6 @@ private fun PanelSimple(vm: AppViewModel) {
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Compartir", fontSize = 14.sp) }
 
-         // NUEVO BOTÓN DE GUARDAR
          Button(
              onClick = { vm.guardarActualEnGaleria() },
              enabled = s.resultado != null,
@@ -219,7 +218,6 @@ private fun PanelCapas(vm: AppViewModel) {
          }
      }
      
-     // BOTONERA DE CAPAS (GENERAR, COMPARTIR Y GUARDAR)
      Row(
          modifier = Modifier.fillMaxWidth(),
          horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -239,7 +237,6 @@ private fun PanelCapas(vm: AppViewModel) {
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Compartir", fontSize = 14.sp) }
 
-         // NUEVO BOTÓN DE GUARDAR
          Button(
              onClick = { vm.guardarActualEnGaleria() },
              enabled = c.resultado != null,
@@ -268,7 +265,7 @@ private fun EstiloEditor(
     permitirSin: Boolean, 
     onRecargar: () -> Unit, 
     onImportar: () -> Unit,
-    autoActivo: Boolean = false // <-- NUEVO PARÁMETRO
+    autoActivo: Boolean = false
 ) {
     val listaFuentes = if (permitirSin) listOf(SIN) + fuentes else fuentes
     val colores = if (permitirSin) LISTA_COLORES_SIN else LISTA_COLORES
@@ -306,6 +303,9 @@ private fun EstiloEditor(
         CampoSlider("Desplazamiento X", e.sx, -50..50, { onChange(e.copy(sx = it)) })
         CampoSlider("Desplazamiento Y", e.sy, -50..50, { onChange(e.copy(sy = it)) })
         CampoSlider("Desenfoque", e.blur, 0..20, { onChange(e.copy(blur = it)) })
+        
+        // NUEVO SLIDER DE OPACIDAD
+        CampoSlider("Opacidad de la sombra (%)", e.sombraOpacidad, 0..100, { onChange(e.copy(sombraOpacidad = it)) })
     }
     
     CampoCheck("Caja de fondo", e.caja, { onChange(e.copy(caja = it)) })
@@ -330,7 +330,7 @@ fun CampoSlider(
     rango: IntRange, 
     onValor: (Int) -> Unit, 
     paso: Int = 1,
-    habilitado: Boolean = true // <-- NUEVO
+    habilitado: Boolean = true
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(
@@ -345,7 +345,7 @@ fun CampoSlider(
             onValueChange = { onValor(it.toInt()) },
             valueRange = rango.first.toFloat()..rango.last.toFloat(),
             steps = if (cantidadPasos > 0) cantidadPasos else 0, 
-            enabled = habilitado, // <-- BLOQUEA EL SLIDER SI ES AUTOMÁTICO
+            enabled = habilitado,
             modifier = Modifier.semantics { contentDescription = "$etiqueta, valor actual $valor" }
         )
     }
@@ -369,7 +369,6 @@ fun PantallaVistaPrevia(vm: AppViewModel) {
                      }
                  }
              }
-             // Botón de compartir también acá en la vista previa
              Button(
                  onClick = { if (resultado.uri != null) Almacen.compartir(context, resultado.uri!!) },
                  modifier = Modifier.fillMaxWidth().height(48.dp)

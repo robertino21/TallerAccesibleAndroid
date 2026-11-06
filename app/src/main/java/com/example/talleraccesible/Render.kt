@@ -1,5 +1,4 @@
 package com.example.talleraccesible
-
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BlurMaskFilter
@@ -14,16 +13,16 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Port de la lógica de Pillow a android.graphics.
- * Todo lo de aquí es pesado: llamarlo siempre desde un hilo de fondo.
- */
+Port de la lógica de Pillow a android.graphics.
+Todo lo de aquí es pesado: llamarlo siempre desde un hilo de fondo.
+*/
 object Render {
-
     // ---------- estilo resuelto (colores ya convertidos, valores por defecto aplicados) ----------
     private class E(
         val tf: Typeface, val tam: Float, val inter: Float,
         val texto: Int, val borde: Int?, val grosor: Float,
-        val sombra: Int?, val sx: Float, val sy: Float, val blur: Float,
+        val sombra: Int?, val sombraAlfa: Float, // <-- AGREGAR sombraAlfa
+        val sx: Float, val sy: Float, val blur: Float,
         val caja: Int?, val pad: Float, val radio: Float,
         val align: Int, // 0 izquierda, 1 centro, 2 derecha
     )
@@ -38,6 +37,7 @@ object Render {
             borde = colBorde,
             grosor = if (colBorde != null) e.grosor.toFloat() else 0f,
             sombra = if (e.sombra) colorDe(e.colorSombra) else null,
+            sombraAlfa = e.sombraOpacidad / 100f, // <-- AGREGAR ESTO
             sx = e.sx.toFloat(), sy = e.sy.toFloat(), blur = e.blur.toFloat(),
             caja = if (e.caja) colorDe(e.colorCaja) else null,
             pad = e.padding.toFloat(), radio = e.radio.toFloat(),
@@ -86,13 +86,11 @@ object Render {
 
     private fun dibujar(c: Canvas, b: Bloque, e: E, tam: Float, left: Float, top: Float) {
         if (b.lineas.isEmpty()) return
-
         if (e.caja != null) {
             val pc = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = e.caja }
             val r = RectF(left - e.pad, top - e.pad, left + b.anchoMax + e.pad, top + b.alto + e.pad)
             c.drawRoundRect(r, e.radio, e.radio, pc)
         }
-
         fun xLinea(i: Int): Float = when (e.align) {
             0 -> left
             2 -> left + b.anchoMax - b.anchos[i]
@@ -105,6 +103,8 @@ object Render {
         if (e.sombra != null) {
             val ps = paintTexto(e, tam).apply {
                 color = e.sombra
+                // ACÁ APLICAMOS LA OPACIDAD:
+                alpha = (Color.alpha(e.sombra) * e.sombraAlfa).toInt() 
                 if (e.grosor > 0f) { style = Paint.Style.FILL_AND_STROKE; strokeWidth = 2f * e.grosor }
                 if (e.blur > 0f) maskFilter = BlurMaskFilter(max(1f, e.blur), BlurMaskFilter.Blur.NORMAL)
             }
@@ -178,7 +178,6 @@ object Render {
         val e = resolver(estilo)
         val w = l.ancho.toFloat()
         val h = l.alto.toFloat()
-
         var tam = e.tam
         var b = medir(texto, e, tam, w * 0.85f)
         if (auto) {
