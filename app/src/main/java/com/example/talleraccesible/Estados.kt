@@ -1,7 +1,13 @@
 package com.example.talleraccesible
+
 import android.app.Application
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
+import android.os.Environment
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -16,6 +22,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class Entorno(val app: Application, val scope: CoroutineScope) {
     var decir: (String) -> Unit = {}
@@ -52,7 +61,7 @@ class LienzoState {
     var color2 by mutableStateOf("Blanco")
     var fondoUri by mutableStateOf<Uri?>(null)
     var fondoNombre by mutableStateOf("")
-    var opacidadFondo by mutableIntStateOf(100) // NUEVO
+    var opacidadFondo by mutableIntStateOf(100) // RECUPERADO
 
     fun elegirPreset(nombre: String) {
         preset = nombre
@@ -66,7 +75,7 @@ class LienzoState {
         preset = PRESETS[0].nombre; ancho = 1080; alto = 1080
         fondoTipo = FONDOS[0]; color1 = "Blanco"; color2 = "Blanco"
         fondoUri = null; fondoNombre = ""
-        opacidadFondo = 100 // NUEVO
+        opacidadFondo = 100 // RECUPERADO
     }
 }
 
@@ -88,7 +97,7 @@ class SimpleState {
         env.ejecutar({ ocupado = it }, "Error al generar la imagen") {
             val r = withContext(Dispatchers.Default) {
                 val s = Render.simple(env.app, t, l, e, p, y, a)
-                val uri = Almacen.guardarTemporal(env.app, s.bitmap)
+                val uri = Almacen.guardarTemporal(env.app, s.bitmap) // RECUPERADO: Guardado temporal
                 Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa generada", s.avisos)
             }
             resultado = r
@@ -175,7 +184,7 @@ class CapasState {
         env.ejecutar({ ocupado = it }, "Error al generar las capas") {
             val r = withContext(Dispatchers.Default) {
                 val s = Render.capas(env.app, l, lista)
-                val uri = Almacen.guardarTemporal(env.app, s.bitmap)
+                val uri = Almacen.guardarTemporal(env.app, s.bitmap) // RECUPERADO: Guardado temporal
                 Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa de capas", s.avisos)
             }
             resultado = r
@@ -205,7 +214,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var fuentes by mutableStateOf(Fuentes.listar(app))
         private set
     
-    // 👇 AQUÍ ESTÁ LA LÍNEA QUE FALTABA 👇
+    // Variable crítica para que no explote todo
     val texto = TextoState()
 
     // PERSISTENCIA DE PLANTILLAS CON GSON
@@ -284,12 +293,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val uriNueva = Almacen.guardarEnGaleria(
-                    getApplication(), 
-                    r.uri, 
-                    "Texto", 
-                    "imagen_taller"
-                )
+                Almacen.guardarEnGaleria(getApplication(), r.uri, "Texto", "imagen_taller")
                 withContext(Dispatchers.Main) {
                     entorno.decir("Imagen guardada en la galería")
                 }
@@ -299,5 +303,79 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    // --- LÓGICA DE ACTUALIZACIÓN ---
+    fun buscarActualizacion() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val url = URL("https://api.github.com/repos/robertino21/TallerAccesibleAndroid/releases/latest")
+                val conexion = url.openConnection() as HttpURLConnection
+                conexion.requestMethod = "GET"
+                conexion.setRequestProperty("Accept", "application/vnd.github.v3+json")
+
+                if (conexion.responseCode == 200) {
+                    val respuesta = conexion.inputStream.bufferedReader().readText()
+                    val json = JSONObject(respuesta)
+                    val tagVersion = json.getString("tag_name")
+                    val assets = json.getJSONArray("assets")
+                    
+                    if (assets.length() > 0) {
+                        val asset = assets.getJSONObject(0)
+                        val urlDescarga = asset.getString("browser_download_url")
+                        
+                        withContext(Dispatchers.Main) {
+                            entorno.decir("Hay una nueva versión disponible: $tagVersion. Iniciando descarga...")
+                            descargarEInstalar(urlDescarga)
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) { entorno.decir("No hay archivos APK en la última versión.") }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        entorno.decir("No se pudo verificar la actualización o ya estás al día.")
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    entorno.decir("Error de conexión al buscar actualizaciones")
+                }
+            }
+        }
+    }
+
+    private fun descargarEInstalar(urlApk: String) {
+        val contexto = getApplication<Application>()
+        val manager = contexto.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        
+        val request = DownloadManager.Request(Uri.parse(urlApk))
+        request.setTitle("Actualizando Taller Accesible")
+        request.setDescription("Descargando nueva versión...")
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "TallerAccesible_Update.apk")
+        
+        val idDescarga = manager.enqueue(request)
+        entorno.decir("Descargando actualización...")
+
+        val receptor = object : BroadcastReceiver() {
+            override fun onReceive(ctxt: Context, intent: Intent) {
+                val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                if (id == idDescarga) {
+                    val uri = manager.getUriForDownloadedFile(idDescarga)
+                    if (uri != null) {
+                        val intentInstalar = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, "application/vnd.android.package-archive")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        contexto.startActivity(intentInstalar)
+                    } else {
+                        entorno.decir("Error al descargar el archivo")
+                    }
+                    contexto.unregisterReceiver(this)
+                }
+            }
+        }
+        contexto.registerReceiver(receptor, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
     }
 }
