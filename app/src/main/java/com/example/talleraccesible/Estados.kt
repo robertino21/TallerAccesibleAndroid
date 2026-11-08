@@ -379,6 +379,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
-        contexto.registerReceiver(receptor, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+//         // Para Android 13 (API 33) en adelante
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            contexto.registerReceiver(
+                receptor,
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                Context.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            contexto.registerReceiver(
+                receptor,
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+            )
+        }
     }
-}
