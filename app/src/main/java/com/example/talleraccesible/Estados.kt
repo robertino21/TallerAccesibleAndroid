@@ -312,8 +312,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val url = URL("https://api.github.com/repos/robertino21/TallerAccesibleAndroid/releases/latest")
                 val conexion = url.openConnection() as HttpURLConnection
                 conexion.requestMethod = "GET"
-conexion.setRequestProperty("User-Agent", "TallerAccesible-Android")
                 conexion.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                conexion.setRequestProperty("User-Agent", "TallerAccesible-Android")
+                conexion.connectTimeout = 10000
+                conexion.readTimeout = 10000
 
                 if (conexion.responseCode == 200) {
                     val respuesta = conexion.inputStream.bufferedReader().readText()
@@ -334,12 +336,12 @@ conexion.setRequestProperty("User-Agent", "TallerAccesible-Android")
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        entorno.decir("No se pudo verificar la actualización o ya estás al día.")
+                        entorno.decir("El servidor respondió con código: ${conexion.responseCode}")
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    entorno.decir("Error de conexión al buscar actualizaciones")
+                    entorno.decir("Error: ${e.message ?: "Desconocido"}")
                 }
             }
         }
