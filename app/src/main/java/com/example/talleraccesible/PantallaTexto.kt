@@ -408,20 +408,30 @@ fun PantallaAjustes(vm: AppViewModel) {
                      Switch(checked = vm.forzarOscuro == true, onCheckedChange = { vm.forzarOscuro = it })
                  }
              }
-         // TARJETA DE ACTUALIZACIÓN
-         Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
-             Column(Modifier.padding(16.dp)) {
-                 Text("Actualizaciones", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                 Spacer(Modifier.height(8.dp))
-                 Button(
-                     onClick = { vm.buscarActualizacion() },
-                     modifier = Modifier.fillMaxWidth()
-                 ) {
-                     Text("Buscar actualizaciones")
-                 }
-             }
-         }
-         }
+                 // TARJETA DE ACTUALIZACIÓN
+                 Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
+                     Column(Modifier.padding(16.dp)) {
+                         Text("Actualizaciones", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                         Spacer(Modifier.height(8.dp))
+                         
+                         if (vm.descargando) {
+                             // Barra de progreso en tiempo real
+                             LinearProgressIndicator(
+                                 progress = { vm.progresoDescarga },
+                                 modifier = Modifier.fillMaxWidth(),
+                             )
+                             Spacer(Modifier.height(8.dp))
+                             Text("Descargando... ${(vm.progresoDescarga * 100).toInt()}%", fontSize = 14.sp)
+                         } else {
+                             Button(
+                                 onClick = { vm.buscarActualizacion() },
+                                 modifier = Modifier.fillMaxWidth()
+                             ) {
+                                 Text("Buscar actualizaciones")
+                             }
+                         }
+                     }
+                 }}
          Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
              Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                  Text("Plantillas", fontWeight = FontWeight.Bold, fontSize = 18.sp)

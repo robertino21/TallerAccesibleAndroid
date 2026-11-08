@@ -306,6 +306,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // --- LÓGICA DE ACTUALIZACIÓN ---
+    // Variables nuevas para el progreso
+    var descargando by mutableStateOf(false)
+        private set
+    var progresoDescarga by mutableStateOf(0f)
+        private set
+
     fun buscarActualizacion() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -328,15 +334,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         val urlDescarga = asset.getString("browser_download_url")
                         
                         withContext(Dispatchers.Main) {
-                            entorno.decir("Hay una nueva versión disponible: $tagVersion. Iniciando descarga...")
-                            descargarEInstalar(urlDescarga)
+                            entorno.decir("Hay una nueva versión: $tagVersion. Iniciando descarga...")
+                            iniciarDescargaConProgreso(urlDescarga)
                         }
                     } else {
                         withContext(Dispatchers.Main) { entorno.decir("No hay archivos APK en la última versión.") }
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        entorno.decir("El servidor respondió con código: ${conexion.responseCode}")
+                        entorno.decir("No se pudo verificar la actualización o ya estás al día.")
                     }
                 }
             } catch (e: Exception) {
@@ -347,49 +353,75 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun descargarEInstalar(urlApk: String) {
-        val contexto = getApplication<Application>()
-        val manager = contexto.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        
-        val request = DownloadManager.Request(Uri.parse(urlApk))
-        request.setTitle("Actualizando Taller Accesible")
-        request.setDescription("Descargando nueva versión...")
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "TallerAccesible_Update.apk")
-        
-        val idDescarga = manager.enqueue(request)
-        entorno.decir("Descargando actualización...")
+    private fun iniciarDescargaConProgreso(urlApk: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                withContext(Dispatchers.Main) {
+                    descargando = true
+                    progresoDescarga = 0f
+                }
 
-        val receptor = object : BroadcastReceiver() {
-            override fun onReceive(ctxt: Context, intent: Intent) {
-                val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-                if (id == idDescarga) {
-                    val uri = manager.getUriForDownloadedFile(idDescarga)
-                    if (uri != null) {
-                        val intentInstalar = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(uri, "application/vnd.android.package-archive")
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                val url = URL(urlApk)
+                val conexion = url.openConnection() as HttpURLConnection
+                conexion.connectTimeout = 15000
+                conexion.readTimeout = 15000
+                conexion.connect()
+
+                val longitudArchivo = conexion.contentLength.toLong()
+                val archivoDestino = File(getApplication<Application>().cacheDir, "TallerAccesible_Update.apk")
+                
+                val inputStream = conexion.inputStream
+                val outputStream = FileOutputStream(archivoDestino)
+
+                val buffer = ByteArray(8192)
+                var bytesLeidos: Int
+                var totalLeido: Long = 0
+
+                while (inputStream.read(buffer).also { bytesLeidos = it } != -1) {
+                    outputStream.write(buffer, 0, bytesLeidos)
+                    totalLeido += bytesLeidos
+                    if (longitudArchivo > 0) {
+                        val progreso = totalLeido.toFloat() / longitudArchivo
+                        withContext(Dispatchers.Main) {
+                            progresoDescarga = progreso
                         }
-                        contexto.startActivity(intentInstalar)
-                    } else {
-                        entorno.decir("Error al descargar el archivo")
                     }
-                    contexto.unregisterReceiver(this)
+                }
+
+                outputStream.flush()
+                outputStream.close()
+                inputStream.close()
+
+                withContext(Dispatchers.Main) {
+                    descargando = false
+                    progresoDescarga = 1f
+                    entorno.decir("Descarga completa. Abriendo instalador...")
+                    abrirInstalador(archivoDestino)
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    descargando = false
+                    entorno.decir("Error al descargar: ${e.message}")
                 }
             }
         }
-//         // Para Android 13 (API 33) en adelante
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            contexto.registerReceiver(
-                receptor,
-                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-                Context.RECEIVER_NOT_EXPORTED
+    }
+
+    private fun abrirInstalador(archivo: File) {
+        try {
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                getApplication(),
+                "${getApplication<Application>().packageName}.fileprovider",
+                archivo
             )
-        } else {
-            contexto.registerReceiver(
-                receptor,
-                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            getApplication<Application>().startActivity(intent)
+        } catch (e: Exception) {
+            entorno.decir("Error al abrir el instalador: ${e.message}")
         }
-    }}
+    }
