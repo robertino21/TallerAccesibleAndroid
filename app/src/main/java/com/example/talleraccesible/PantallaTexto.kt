@@ -329,7 +329,7 @@ private fun EstiloEditor(
 @Composable
 private fun rememberImportadorFuentes(vm: AppViewModel): () -> Unit {
     val selector = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? -> if (uri != null) vm.importarFuente(uri) }
-    return { selector.launch("/") }
+    return { selector.launch("*/*") }
 }
 
 @Composable
