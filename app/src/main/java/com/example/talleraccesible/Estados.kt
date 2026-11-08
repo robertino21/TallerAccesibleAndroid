@@ -312,6 +312,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val url = URL("https://api.github.com/repos/robertino21/TallerAccesibleAndroid/releases/latest")
                 val conexion = url.openConnection() as HttpURLConnection
                 conexion.requestMethod = "GET"
+conexion.setRequestProperty("User-Agent", "TallerAccesible-Android")
                 conexion.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
                 if (conexion.responseCode == 200) {
