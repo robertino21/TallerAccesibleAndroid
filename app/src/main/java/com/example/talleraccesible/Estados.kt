@@ -392,4 +392,4 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
             )
         }
-    }
+    }}
