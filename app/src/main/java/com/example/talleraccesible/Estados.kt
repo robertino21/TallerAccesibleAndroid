@@ -426,3 +426,4 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             entorno.decir("Error al abrir el instalador: ${e.message}")
         }
     }
+}
