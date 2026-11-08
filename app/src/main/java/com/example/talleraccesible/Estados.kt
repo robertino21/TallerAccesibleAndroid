@@ -25,7 +25,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-
+import java.io.File
+import java.io.FileOutputStream
 class Entorno(val app: Application, val scope: CoroutineScope) {
     var decir: (String) -> Unit = {}
 }
