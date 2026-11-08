@@ -408,6 +408,19 @@ fun PantallaAjustes(vm: AppViewModel) {
                      Switch(checked = vm.forzarOscuro == true, onCheckedChange = { vm.forzarOscuro = it })
                  }
              }
+         // TARJETA DE ACTUALIZACIÓN
+         Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
+             Column(Modifier.padding(16.dp)) {
+                 Text("Actualizaciones", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                 Spacer(Modifier.height(8.dp))
+                 Button(
+                     onClick = { vm.buscarActualizacion() },
+                     modifier = Modifier.fillMaxWidth()
+                 ) {
+                     Text("Buscar actualizaciones")
+                 }
+             }
+         }
          }
          Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
              Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
