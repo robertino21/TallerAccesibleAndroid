@@ -1,11 +1,8 @@
 package com.example.talleraccesible
 
 import android.app.Application
-import android.app.DownloadManager
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
@@ -23,10 +20,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 import java.io.File
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+
 class Entorno(val app: Application, val scope: CoroutineScope) {
     var decir: (String) -> Unit = {}
 }
@@ -62,7 +60,7 @@ class LienzoState {
     var color2 by mutableStateOf("Blanco")
     var fondoUri by mutableStateOf<Uri?>(null)
     var fondoNombre by mutableStateOf("")
-    var opacidadFondo by mutableIntStateOf(100) // RECUPERADO
+    var opacidadFondo by mutableIntStateOf(100)
 
     fun elegirPreset(nombre: String) {
         preset = nombre
@@ -76,7 +74,7 @@ class LienzoState {
         preset = PRESETS[0].nombre; ancho = 1080; alto = 1080
         fondoTipo = FONDOS[0]; color1 = "Blanco"; color2 = "Blanco"
         fondoUri = null; fondoNombre = ""
-        opacidadFondo = 100 // RECUPERADO
+        opacidadFondo = 100
     }
 }
 
@@ -98,11 +96,10 @@ class SimpleState {
         env.ejecutar({ ocupado = it }, "Error al generar la imagen") {
             val r = withContext(Dispatchers.Default) {
                 val s = Render.simple(env.app, t, l, e, p, y, a)
-                val uri = Almacen.guardarTemporal(env.app, s.bitmap) // RECUPERADO: Guardado temporal
-                Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa generada", s.avisos)
+                Almacen.publicar(env.app, s, "Texto", "imagen_texto", "Texto: ${t.take(150)}")
             }
             resultado = r
-            env.decir("Vista previa lista. Puedes compartirla o guardarla.")
+            env.decir("Imagen guardada en Imágenes, Taller Accesible")
         }
     }
 
@@ -185,11 +182,11 @@ class CapasState {
         env.ejecutar({ ocupado = it }, "Error al generar las capas") {
             val r = withContext(Dispatchers.Default) {
                 val s = Render.capas(env.app, l, lista)
-                val uri = Almacen.guardarTemporal(env.app, s.bitmap) // RECUPERADO: Guardado temporal
-                Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa de capas", s.avisos)
+                Almacen.publicar(env.app, s, "Texto", "capas", "Imagen de ${lista.size} capas")
             }
             resultado = r
-            env.decir("Vista previa de capas lista.")
+            val extra = if (r.avisos.isEmpty()) "" else ". " + r.avisos.joinToString(". ")
+            env.decir("Capas guardadas en Imágenes, Taller Accesible$extra")
         }
     }
 
@@ -215,10 +212,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var fuentes by mutableStateOf(Fuentes.listar(app))
         private set
     
-    // Variable crítica para que no explote todo
     val texto = TextoState()
 
-    // PERSISTENCIA DE PLANTILLAS CON GSON
     private val prefs = app.getSharedPreferences("taller_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
 
@@ -307,7 +302,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // --- LÓGICA DE ACTUALIZACIÓN ---
-    // Variables nuevas para el progreso
     var descargando by mutableStateOf(false)
         private set
     var progresoDescarga by mutableStateOf(0f)
@@ -410,10 +404,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun abrirInstalador(archivo: File) {
+        val contexto = getApplication<Application>()
+        
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (!contexto.packageManager.canRequestPackageInstalls()) {
+                val intentAjustes = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:${contexto.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                contexto.startActivity(intentAjustes)
+                entorno.decir("Activa el permiso para instalar apps y volvé a intentar.")
+                return
+            }
+        }
+
         try {
             val uri = androidx.core.content.FileProvider.getUriForFile(
-                getApplication(),
-                "${getApplication<Application>().packageName}.fileprovider",
+                contexto,
+                "${contexto.packageName}.fileprovider",
                 archivo
             )
             val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -421,7 +429,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            getApplication<Application>().startActivity(intent)
+            contexto.startActivity(intent)
         } catch (e: Exception) {
             entorno.decir("Error al abrir el instalador: ${e.message}")
         }

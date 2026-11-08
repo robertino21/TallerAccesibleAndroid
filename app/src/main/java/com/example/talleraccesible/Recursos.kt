@@ -1,4 +1,5 @@
 package com.example.talleraccesible
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
@@ -40,7 +41,6 @@ object Fuentes {
 
     private fun carpetaUsuario(ctx: Context) = File(ctx.filesDir, "fuentes").apply { mkdirs() }
 
-    /** Orden: Predeterminada, assets/fuentes, fuentes importadas, fuentes del sistema. */
     fun listar(ctx: Context): List<String> {
         val m = LinkedHashMap<String, () -> Typeface>()
         m[FUENTE_DEF] = { Typeface.DEFAULT }
@@ -69,7 +69,6 @@ object Fuentes {
         runCatching { origen[nombre]?.invoke() }.getOrNull() ?: Typeface.DEFAULT
     }
 
-    /** Copia un .ttf/.otf elegido por el usuario a la carpeta interna de fuentes. */
     fun importar(ctx: Context, uri: Uri): String? {
         val nombre = Imagenes.nombre(ctx, uri)
         if (!esFuente(nombre)) return null
@@ -85,10 +84,8 @@ object Fuentes {
 // IMÁGENES
 // ============================================================
 object Imagenes {
-    /** [muestreo] indica cuántas veces se redujo: tamaño original ≈ bitmap * muestreo. */
     class Cargada(val bitmap: Bitmap, val muestreo: Int)
 
-    /** ImageDecoder aplica la rotación EXIF automáticamente (importante con fotos de cámara). */
     fun cargar(ctx: Context, uri: Uri, maxLado: Int = 4096): Cargada {
         var muestreo = 1
         val src = ImageDecoder.createSource(ctx.contentResolver, uri)
@@ -111,7 +108,6 @@ object Imagenes {
         return uri.lastPathSegment ?: "archivo"
     }
 
-    /** Miniatura para mostrar en pantalla (evita texturas gigantes). */
     fun vista(b: Bitmap, limite: Int = 1024): Bitmap {
         val mayor = max(b.width, b.height)
         if (mayor <= limite) return b
@@ -123,7 +119,7 @@ object Imagenes {
 }
 
 // ============================================================
-// ALMACENAMIENTO (Galería: Imágenes/TallerAccesible/...)
+// ALMACENAMIENTO (Galería)
 // ============================================================
 object Almacen {
     fun guardar(ctx: Context, bmp: Bitmap, carpeta: String, base: String, png: Boolean): Uri {
@@ -176,23 +172,22 @@ object Almacen {
         )
     }
 
-    /** Guarda la imagen en la caché temporal (NO en la galería). Devuelve la URI. */
+    // Recuperado para el botón Guardar
+    fun guardarEnGaleria(ctx: Context, uri: Uri, carpeta: String, base: String): Uri {
+        val bmp = MediaStore.Images.Media.getBitmap(ctx.contentResolver, uri)
+        return guardar(ctx, bmp, carpeta, base, false)
+    }
+
+    // Recuperado para guardar imágenes temporales
     fun guardarTemporal(ctx: Context, bmp: Bitmap): Uri {
         val archivo = File(ctx.cacheDir, "preview_taller.jpg")
         archivo.outputStream().use { salida ->
             bmp.compress(Bitmap.CompressFormat.JPEG, 95, salida)
         }
-        // Para compartir por WhatsApp en Android moderno, necesitamos un FileProvider
         return androidx.core.content.FileProvider.getUriForFile(
             ctx,
             "${ctx.packageName}.fileprovider",
             archivo
         )
-    }
-
-    /** Copia la imagen temporal a la galería definitiva. */
-    fun guardarEnGaleria(ctx: Context, uriTemporal: Uri, carpeta: String, base: String): Uri {
-        val bmp = android.provider.MediaStore.Images.Media.getBitmap(ctx.contentResolver, uriTemporal)
-        return guardar(ctx, bmp, carpeta, base, false)
     }
 }
