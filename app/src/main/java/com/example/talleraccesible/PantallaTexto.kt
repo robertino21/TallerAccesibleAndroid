@@ -1,4 +1,5 @@
 package com.example.talleraccesible
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -56,11 +57,26 @@ private fun PanelSimple(vm: AppViewModel) {
                      modifier = Modifier.weight(1f).heightIn(min = 120.dp).semantics { contentDescription = "Escribe tu texto aquí" },
                      placeholder = { Text("Escribe tu texto aquí...") }, shape = RoundedCornerShape(12.dp)
                  )
-                 Spacer(Modifier.width(12.dp))
-                 Button(
-                     onClick = { s.texto = clipboard.getText()?.text ?: ""; env.decir("Texto pegado") },
-                     modifier = Modifier.padding(top = 8.dp), shape = RoundedCornerShape(8.dp)
-                 ) { Text("Pegar") }
+                 Spacer(Modifier.width(8.dp))
+                 Column {
+                     // Botón Pegar
+                     Button(
+                         onClick = { s.texto = clipboard.getText()?.text ?: ""; env.decir("Texto pegado") },
+                         modifier = Modifier.padding(top = 8.dp), shape = RoundedCornerShape(8.dp)
+                     ) { Text("Pegar") }
+                     
+                     Spacer(Modifier.height(8.dp))
+                     
+                     // NUEVO: Botón Borrar
+                     OutlinedButton(
+                         onClick = { s.texto = ""; env.decir("Texto borrado") },
+                         modifier = Modifier.height(40.dp),
+                         shape = RoundedCornerShape(8.dp),
+                         contentPadding = PaddingValues(horizontal = 8.dp)
+                     ) { 
+                         Icon(imageVector = Icons.Default.Delete, contentDescription = "Borrar texto")
+                     }
+                 }
              }
              Spacer(Modifier.height(20.dp))
              Row(verticalAlignment = Alignment.CenterVertically) {
@@ -122,7 +138,6 @@ private fun PanelSimple(vm: AppViewModel) {
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Guardar", fontSize = 14.sp) }
          
-         // Botón Limpiar
          OutlinedButton(
              onClick = { vm.limpiarTodo() },
              modifier = Modifier.height(56.dp), 
@@ -149,7 +164,6 @@ private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
              }
              CampoLista("Tipo de fondo", FONDOS, l.fondoTipo, { l.fondoTipo = it })
              
-             // Slider de opacidad para cualquier tipo de fondo
              CampoSlider("Opacidad del fondo", l.opacidadFondo, 0..100, { l.opacidadFondo = it })
 
              if (l.fondoTipo == "Imagen") {
@@ -362,9 +376,7 @@ fun CampoSlider(
 
 @Composable
 fun PantallaVistaPrevia(vm: AppViewModel) {
-    // ACÁ ESTÁ EL ARREGLO: Le decimos a Kotlin que es de tipo Resultado?
     val resultado: Resultado? = vm.texto.simple.resultado ?: vm.texto.capas.resultado
-    
     var zoom by remember { mutableStateOf(1f) }
     val context = LocalContext.current
     
@@ -398,6 +410,8 @@ fun PantallaAjustes(vm: AppViewModel) {
     
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
          Text("Configuración", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+         
+         // TARJETA DE TEMA
          Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
              Column(Modifier.padding(16.dp)) {
                  Text("Tema de la aplicación", fontWeight = FontWeight.Bold, fontSize = 18.sp)
@@ -408,30 +422,33 @@ fun PantallaAjustes(vm: AppViewModel) {
                      Switch(checked = vm.forzarOscuro == true, onCheckedChange = { vm.forzarOscuro = it })
                  }
              }
-                 // TARJETA DE ACTUALIZACIÓN
-                 Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
-                     Column(Modifier.padding(16.dp)) {
-                         Text("Actualizaciones", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                         Spacer(Modifier.height(8.dp))
-                         
-                         if (vm.descargando) {
-                             // Barra de progreso en tiempo real
-                             LinearProgressIndicator(
-                                 progress = { vm.progresoDescarga },
-                                 modifier = Modifier.fillMaxWidth(),
-                             )
-                             Spacer(Modifier.height(8.dp))
-                             Text("Descargando... ${(vm.progresoDescarga * 100).toInt()}%", fontSize = 14.sp)
-                         } else {
-                             Button(
-                                 onClick = { vm.buscarActualizacion() },
-                                 modifier = Modifier.fillMaxWidth()
-                             ) {
-                                 Text("Buscar actualizaciones")
-                             }
-                         }
+         }
+         
+         // TARJETA DE ACTUALIZACIÓN
+         Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
+             Column(Modifier.padding(16.dp)) {
+                 Text("Actualizaciones", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                 Spacer(Modifier.height(8.dp))
+                 
+                 if (vm.descargando) {
+                     LinearProgressIndicator(
+                         progress = { vm.progresoDescarga },
+                         modifier = Modifier.fillMaxWidth(),
+                     )
+                     Spacer(Modifier.height(8.dp))
+                     Text("Descargando... ${(vm.progresoDescarga * 100).toInt()}%", fontSize = 14.sp)
+                 } else {
+                     Button(
+                         onClick = { vm.buscarActualizacion() },
+                         modifier = Modifier.fillMaxWidth()
+                     ) {
+                         Text("Buscar actualizaciones")
                      }
-                 }}
+                 }
+             }
+         }
+
+         // TARJETA DE PLANTILLAS
          Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
              Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                  Text("Plantillas", fontWeight = FontWeight.Bold, fontSize = 18.sp)
@@ -446,50 +463,48 @@ fun PantallaAjustes(vm: AppViewModel) {
                      Text("Guardar plantilla")
                  }
                  
-                 // DESPLEGABLE Y BOTÓN DE BORRAR
-                if (vm.plantillas.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            OutlinedButton(
-                                onClick = { expandido = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text(plantillaSeleccionada)
-                            }
-                            DropdownMenu(
-                                expanded = expandido,
-                                onDismissRequest = { expandido = false }
-                            ) {
-                                vm.plantillas.forEach { plantilla ->
-                                    DropdownMenuItem(
-                                        text = { Text(plantilla.nombre) },
-                                        onClick = {
-                                            plantillaSeleccionada = plantilla.nombre
-                                            expandido = false
-                                            vm.aplicarPlantilla(plantilla)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        // BOTÓN DE ELIMINAR
-                        IconButton(
-                            onClick = { 
-                                if (plantillaSeleccionada != "Seleccionar plantilla...") {
-                                    vm.borrarPlantilla(plantillaSeleccionada)
-                                    plantillaSeleccionada = "Seleccionar plantilla..."
-                                } else {
-                                    vm.entorno.decir("Selecciona una plantilla primero")
-                                }
-                            }
-                        ) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Borrar plantilla")
-                        }
-                    }
-                }
+                 if (vm.plantillas.isNotEmpty()) {
+                     Spacer(Modifier.height(8.dp))
+                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                         Box(modifier = Modifier.weight(1f)) {
+                             OutlinedButton(
+                                 onClick = { expandido = true },
+                                 modifier = Modifier.fillMaxWidth(),
+                                 shape = RoundedCornerShape(8.dp)
+                             ) {
+                                 Text(plantillaSeleccionada)
+                             }
+                             DropdownMenu(
+                                 expanded = expandido,
+                                 onDismissRequest = { expandido = false }
+                             ) {
+                                 vm.plantillas.forEach { plantilla ->
+                                     DropdownMenuItem(
+                                         text = { Text(plantilla.nombre) },
+                                         onClick = {
+                                             plantillaSeleccionada = plantilla.nombre
+                                             expandido = false
+                                             vm.aplicarPlantilla(plantilla)
+                                         }
+                                     )
+                                 }
+                             }
+                         }
+                         IconButton(
+                             onClick = { 
+                                 if (plantillaSeleccionada != "Seleccionar plantilla...") {
+                                     vm.borrarPlantilla(plantillaSeleccionada)
+                                     plantillaSeleccionada = "Seleccionar plantilla..."
+                                 } else {
+                                     vm.entorno.decir("Selecciona una plantilla primero")
+                                 }
+                             }
+                         ) {
+                             Icon(imageVector = Icons.Default.Delete, contentDescription = "Borrar plantilla")
+                         }
+                     }
+                 }
              }
          }
-     }
+    }
 }
