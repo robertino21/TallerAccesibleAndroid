@@ -442,4 +442,4 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Si falla, avisamos para que el usuario lo haga manual
             entorno.decir("Busca el archivo en la carpeta Descargas e instálalo manualmente.")
         }
-    }
+    }}}
