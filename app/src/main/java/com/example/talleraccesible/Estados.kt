@@ -454,7 +454,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // --- BUSCADOR DE GOOGLE FONTS ---
+    // --- BUSCADOR INTELIGENTE DE GOOGLE FONTS ---
     fun buscarFuenteEnGitHub(nombre: String) {
         if (nombre.isBlank()) return
         viewModelScope.launch(Dispatchers.IO) {
@@ -463,7 +463,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     buscandoFuente = true
                     resultadoBusqueda = null
                     nombreFuenteEncontrada = null
+                    entorno.decir("Buscando $nombre...")
                 }
+                
+                // Normalizamos el texto: minúsculas y sin espacios (Google usa guiones bajos)
+                val busquedaNormalizada = nombre.trim().lowercase().replace(" ", "_")
                 
                 val urlLista = URL("https://api.github.com/repos/google/fonts/contents/ofl")
                 val conexionLista = urlLista.openConnection() as HttpURLConnection
@@ -475,11 +479,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val respuesta = conexionLista.inputStream.bufferedReader().readText()
                     val jsonLista = JSONArray(respuesta)
                     
+                    // Buscamos en TODAS las carpetas
                     for (i in 0 until jsonLista.length()) {
                         val item = jsonLista.getJSONObject(i)
-                        val nombreCarpeta = item.getString("name")
-                        if (nombreCarpeta.contains(nombre, ignoreCase = true)) {
-                            carpetaEncontrada = nombreCarpeta
+                        val nombreCarpeta = item.getString("name").lowercase()
+                        if (nombreCarpeta.contains(busquedaNormalizada)) {
+                            carpetaEncontrada = item.getString("name") // Guardamos el nombre real
                             break
                         }
                     }
@@ -516,7 +521,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         }
                     }
                 } else {
-                    withContext(Dispatchers.Main) { entorno.decir("No se encontró esa fuente en Google.") }
+                    withContext(Dispatchers.Main) { entorno.decir("No se encontró '$nombre' en Google Fonts.") }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { entorno.decir("Error al buscar: ${e.message}") }

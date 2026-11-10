@@ -344,11 +344,14 @@ private fun EstiloEditor(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(16.dp))
-                    if (onBuscarFuente != null) {
-                        Button(
-                            onClick = { onBuscarFuente(textoBusqueda) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Buscar") }
+                    Button(
+                        onClick = { onBuscarFuente?.invoke(textoBusqueda) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Buscar") }
+                    
+                    if (buscandoEstado) {
+                        Spacer(Modifier.height(8.dp))
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     }
                     
                     if (resultadoBusquedaEncontrado != null && nombreFuenteEncontrada != null) {
@@ -362,11 +365,6 @@ private fun EstiloEditor(
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Descargar y aplicar") }
-                    }
-                    
-                    if (buscandoEstado) {
-                        Spacer(Modifier.height(8.dp))
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     }
                 }
             },
