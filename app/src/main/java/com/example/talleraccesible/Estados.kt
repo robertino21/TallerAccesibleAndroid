@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
@@ -220,6 +221,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var plantillas by mutableStateOf<List<Plantilla>>(emptyList())
         private set
 
+    // Variables para el buscador de fuentes
+    var buscandoFuente by mutableStateOf(false)
+        private set
+    var resultadoBusqueda by mutableStateOf<String?>(null)
+        private set
+    var nombreFuenteEncontrada by mutableStateOf<String?>(null)
+        private set
+
     init {
         val json = prefs.getString("plantillas_json", null)
         if (json != null) {
@@ -368,7 +377,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val inputStream = conexion.inputStream
                 val outputStream = FileOutputStream(archivoDestino)
 
-                // Aumentamos el buffer a 64 KB para leer más rápido
                 val buffer = ByteArray(65536)
                 var bytesLeidos: Int
                 var totalLeido: Long = 0
@@ -381,7 +389,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     if (longitudArchivo > 0) {
                         val progresoActual = ((totalLeido.toFloat() / longitudArchivo) * 100).toInt()
                         
-                        // Solo actualizamos la UI si el porcentaje entero cambió
                         if (progresoActual != ultimoProgresoMostrado) {
                             ultimoProgresoMostrado = progresoActual
                             withContext(Dispatchers.Main) {
@@ -414,7 +421,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun abrirInstalador(archivo: File) {
         val contexto = getApplication<Application>()
         
-        // Verificamos permiso
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             if (!contexto.packageManager.canRequestPackageInstalls()) {
                 val intentAjustes = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
@@ -428,18 +434,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         try {
-            // Obtenemos la URI segura con FileProvider
             val uri = androidx.core.content.FileProvider.getUriForFile(
                 contexto,
                 "${contexto.packageName}.fileprovider",
                 archivo
             )
             
-            // Creamos el Intent para instalar
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "application/vnd.android.package-archive")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                // ESTE FLAG ES CLAVE: Le da permiso de lectura al instalador
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) 
             }
             
@@ -450,4 +453,105 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             entorno.decir("Buscá el archivo en la carpeta Descargas e instalalo manualmente.")
         }
     }
-} // <-- ESTA LLAVE CIERRA LA CLASE APPVIEWMODEL
+
+    // --- BUSCADOR DE GOOGLE FONTS ---
+    fun buscarFuenteEnGitHub(nombre: String) {
+        if (nombre.isBlank()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                withContext(Dispatchers.Main) {
+                    buscandoFuente = true
+                    resultadoBusqueda = null
+                    nombreFuenteEncontrada = null
+                }
+                
+                val urlLista = URL("https://api.github.com/repos/google/fonts/contents/ofl")
+                val conexionLista = urlLista.openConnection() as HttpURLConnection
+                conexionLista.setRequestProperty("User-Agent", "TallerAccesible-Android")
+                conexionLista.connectTimeout = 10000
+                
+                var carpetaEncontrada = ""
+                if (conexionLista.responseCode == 200) {
+                    val respuesta = conexionLista.inputStream.bufferedReader().readText()
+                    val jsonLista = JSONArray(respuesta)
+                    
+                    for (i in 0 until jsonLista.length()) {
+                        val item = jsonLista.getJSONObject(i)
+                        val nombreCarpeta = item.getString("name")
+                        if (nombreCarpeta.contains(nombre, ignoreCase = true)) {
+                            carpetaEncontrada = nombreCarpeta
+                            break
+                        }
+                    }
+                }
+                
+                if (carpetaEncontrada.isNotEmpty()) {
+                    val urlArchivos = URL("https://api.github.com/repos/google/fonts/contents/ofl/$carpetaEncontrada")
+                    val conexionArchivos = urlArchivos.openConnection() as HttpURLConnection
+                    conexionArchivos.setRequestProperty("User-Agent", "TallerAccesible-Android")
+                    conexionArchivos.connectTimeout = 10000
+                    
+                    if (conexionArchivos.responseCode == 200) {
+                        val respuestaArchivos = conexionArchivos.inputStream.bufferedReader().readText()
+                        val jsonArchivos = JSONArray(respuestaArchivos)
+                        
+                        var urlDescarga = ""
+                        for (i in 0 until jsonArchivos.length()) {
+                            val archivo = jsonArchivos.getJSONObject(i)
+                            val nombreArchivo = archivo.getString("name")
+                            if (nombreArchivo.endsWith(".ttf") || nombreArchivo.endsWith(".otf")) {
+                                urlDescarga = archivo.getString("download_url")
+                                break
+                            }
+                        }
+                        
+                        if (urlDescarga.isNotEmpty()) {
+                            withContext(Dispatchers.Main) {
+                                resultadoBusqueda = urlDescarga
+                                nombreFuenteEncontrada = carpetaEncontrada
+                                entorno.decir("Encontrada: $carpetaEncontrada. Tocá descargar.")
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) { entorno.decir("No se encontró archivo de fuente en esa carpeta.") }
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) { entorno.decir("No se encontró esa fuente en Google.") }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { entorno.decir("Error al buscar: ${e.message}") }
+            } finally {
+                withContext(Dispatchers.Main) { buscandoFuente = false }
+            }
+        }
+    }
+
+    fun descargarFuenteDeUrl(urlDescarga: String, nombreFuente: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val url = URL(urlDescarga)
+                val conexion = url.openConnection() as HttpURLConnection
+                conexion.setRequestProperty("User-Agent", "TallerAccesible-Android")
+                conexion.connect()
+                
+                val archivoDestino = File(getApplication<Application>().filesDir, "fuentes/$nombreFuente.ttf")
+                archivoDestino.parentFile?.mkdirs()
+                
+                conexion.inputStream.use { input ->
+                    archivoDestino.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                
+                withContext(Dispatchers.Main) {
+                    recargarFuentes("Fuente $nombreFuente descargada")
+                    resultadoBusqueda = null
+                    nombreFuenteEncontrada = null
+                    entorno.decir("Fuente $nombreFuente instalada")
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { entorno.decir("Error al descargar: ${e.message}") }
+            }
+        }
+    }
+}

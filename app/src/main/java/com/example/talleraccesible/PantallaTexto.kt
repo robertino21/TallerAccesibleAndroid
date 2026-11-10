@@ -59,7 +59,6 @@ private fun PanelSimple(vm: AppViewModel) {
                  )
                  Spacer(Modifier.width(8.dp))
                  Column {
-                     // Botón Pegar
                      Button(
                          onClick = { s.texto = clipboard.getText()?.text ?: ""; env.decir("Texto pegado") },
                          modifier = Modifier.padding(top = 8.dp), shape = RoundedCornerShape(8.dp)
@@ -67,7 +66,6 @@ private fun PanelSimple(vm: AppViewModel) {
                      
                      Spacer(Modifier.height(8.dp))
                      
-                     // NUEVO: Botón Borrar
                      OutlinedButton(
                          onClick = { s.texto = ""; env.decir("Texto borrado") },
                          modifier = Modifier.height(40.dp),
@@ -98,7 +96,12 @@ private fun PanelSimple(vm: AppViewModel) {
                  permitirSin = false,
                  onRecargar = { vm.recargarFuentes() }, 
                  onImportar = importar,
-                 autoActivo = s.auto
+                 autoActivo = s.auto,
+                 onBuscarFuente = { vm.buscarFuenteEnGitHub(it) },
+                 onDescargarFuente = { url, nombre -> vm.descargarFuenteDeUrl(url, nombre) },
+                 resultadoBusquedaEncontrado = vm.resultadoBusqueda,
+                 nombreFuenteEncontrada = vm.nombreFuenteEncontrada,
+                 buscandoEstado = vm.buscandoFuente
              )
          }
      }
@@ -113,7 +116,6 @@ private fun PanelSimple(vm: AppViewModel) {
          }
      }
      
-     // BOTONERA: GENERAR, COMPARTIR, GUARDAR Y LIMPIAR
      Row(
          modifier = Modifier.fillMaxWidth(),
          horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -230,7 +232,19 @@ private fun PanelCapas(vm: AppViewModel) {
                  is CapaTexto -> {
                      Seccion("Propiedades de ${capa.nombre}")
                      CampoTexto("Contenido", capa.contenido, { c.actualizar(capa.copy(contenido = it)) }, lineas = 3)
-                     EstiloEditor(e = capa.estilo, onChange = { c.actualizar(capa.copy(estilo = it)) }, fuentes = vm.fuentes, permitirSin = true, onRecargar = { vm.recargarFuentes() }, onImportar = importar)
+                     EstiloEditor(
+                         e = capa.estilo, 
+                         onChange = { c.actualizar(capa.copy(estilo = it)) }, 
+                         fuentes = vm.fuentes, 
+                         permitirSin = true, 
+                         onRecargar = { vm.recargarFuentes() }, 
+                         onImportar = importar,
+                         onBuscarFuente = { vm.buscarFuenteEnGitHub(it) },
+                         onDescargarFuente = { url, nombre -> vm.descargarFuenteDeUrl(url, nombre) },
+                         resultadoBusquedaEncontrado = vm.resultadoBusqueda,
+                         nombreFuenteEncontrada = vm.nombreFuenteEncontrada,
+                         buscandoEstado = vm.buscandoFuente
+                     )
                      CampoSlider("Posición X (%)", capa.xPct, -50..150, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
                      CampoSlider("Posición Y (%)", capa.yPct, -50..150, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
                  }
@@ -291,10 +305,18 @@ private fun EstiloEditor(
     permitirSin: Boolean, 
     onRecargar: () -> Unit, 
     onImportar: () -> Unit,
-    autoActivo: Boolean = false
+    autoActivo: Boolean = false,
+    onBuscarFuente: ((String) -> Unit)? = null,
+    onDescargarFuente: (String, String) -> Unit = { _, _ -> },
+    resultadoBusquedaEncontrado: String? = null,
+    nombreFuenteEncontrada: String? = null,
+    buscandoEstado: Boolean = false
 ) {
     val listaFuentes = if (permitirSin) listOf(SIN) + fuentes else fuentes
     val colores = if (permitirSin) LISTA_COLORES_SIN else LISTA_COLORES
+    
+    var mostrarDialogoFuente by remember { mutableStateOf(false) }
+    var textoBusqueda by remember { mutableStateOf("") }
 
     Seccion("Estilo del texto")
     CampoLista("Fuente", listaFuentes, e.fuente, { onChange(e.copy(fuente = it)) })
@@ -302,6 +324,56 @@ private fun EstiloEditor(
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = onRecargar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Recargar") }
         OutlinedButton(onClick = onImportar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Importar") }
+        OutlinedButton(
+            onClick = { mostrarDialogoFuente = true },
+            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+        ) { Text("Buscar") }
+    }
+
+    // DIÁLOGO DE BÚSQUEDA DE FUENTES
+    if (mostrarDialogoFuente) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoFuente = false },
+            title = { Text("Buscar en Google Fonts") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = textoBusqueda,
+                        onValueChange = { textoBusqueda = it },
+                        label = { Text("Ej: Montserrat, Roboto...") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    if (onBuscarFuente != null) {
+                        Button(
+                            onClick = { onBuscarFuente(textoBusqueda) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Buscar") }
+                    }
+                    
+                    if (resultadoBusquedaEncontrado != null && nombreFuenteEncontrada != null) {
+                        Spacer(Modifier.height(16.dp))
+                        Text("Encontrada: $nombreFuenteEncontrada", fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                onDescargarFuente(resultadoBusquedaEncontrado, nombreFuenteEncontrada)
+                                mostrarDialogoFuente = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Descargar y aplicar") }
+                    }
+                    
+                    if (buscandoEstado) {
+                        Spacer(Modifier.height(8.dp))
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { mostrarDialogoFuente = false }) { Text("Cerrar") }
+            }
+        )
     }
     
     CampoSlider(
@@ -411,7 +483,6 @@ fun PantallaAjustes(vm: AppViewModel) {
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
          Text("Configuración", fontSize = 24.sp, fontWeight = FontWeight.Bold)
          
-         // TARJETA DE TEMA
          Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
              Column(Modifier.padding(16.dp)) {
                  Text("Tema de la aplicación", fontWeight = FontWeight.Bold, fontSize = 18.sp)
@@ -424,7 +495,6 @@ fun PantallaAjustes(vm: AppViewModel) {
              }
          }
          
-         // TARJETA DE ACTUALIZACIÓN
          Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
              Column(Modifier.padding(16.dp)) {
                  Text("Actualizaciones", fontWeight = FontWeight.Bold, fontSize = 18.sp)
@@ -448,7 +518,6 @@ fun PantallaAjustes(vm: AppViewModel) {
              }
          }
 
-         // TARJETA DE PLANTILLAS
          Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
              Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                  Text("Plantillas", fontWeight = FontWeight.Bold, fontSize = 18.sp)
