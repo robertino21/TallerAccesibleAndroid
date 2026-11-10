@@ -368,17 +368,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val inputStream = conexion.inputStream
                 val outputStream = FileOutputStream(archivoDestino)
 
-                val buffer = ByteArray(8192)
+                // Aumentamos el buffer a 64 KB para leer más rápido
+                val buffer = ByteArray(65536)
                 var bytesLeidos: Int
                 var totalLeido: Long = 0
+                var ultimoProgresoMostrado = -1
 
                 while (inputStream.read(buffer).also { bytesLeidos = it } != -1) {
                     outputStream.write(buffer, 0, bytesLeidos)
                     totalLeido += bytesLeidos
+                    
                     if (longitudArchivo > 0) {
-                        val progreso = totalLeido.toFloat() / longitudArchivo
-                        withContext(Dispatchers.Main) {
-                            progresoDescarga = progreso
+                        val progresoActual = ((totalLeido.toFloat() / longitudArchivo) * 100).toInt()
+                        
+                        // Solo actualizamos la UI si el porcentaje entero cambió
+                        if (progresoActual != ultimoProgresoMostrado) {
+                            ultimoProgresoMostrado = progresoActual
+                            withContext(Dispatchers.Main) {
+                                progresoDescarga = progresoActual / 100f
+                            }
                         }
                     }
                 }
@@ -402,44 +410,3 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
-
-    private fun abrirInstalador(archivo: File) {
-        val contexto = getApplication<Application>()
-        
-        // Verificamos permiso
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            if (!contexto.packageManager.canRequestPackageInstalls()) {
-                val intentAjustes = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                    data = Uri.parse("package:${contexto.packageName}")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                contexto.startActivity(intentAjustes)
-                entorno.decir("Activa el permiso para instalar apps y vuelve a intentar.")
-                return
-            }
-        }
-
-        try {
-            // Obtenemos la URI segura con FileProvider
-            val uri = androidx.core.content.FileProvider.getUriForFile(
-                contexto,
-                "${contexto.packageName}.fileprovider",
-                archivo
-            )
-            
-            // Creamos el Intent para instalar
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "application/vnd.android.package-archive")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                // ESTE FLAG ES CLAVE: Le da permiso de lectura al instalador
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) 
-            }
-            
-            contexto.startActivity(intent)
-            
-        } catch (e: Exception) {
-            entorno.decir("Error al abrir el instalador: ${e.message}")
-            // Si falla, avisamos para que el usuario lo haga manual
-            entorno.decir("Busca el archivo en la carpeta Descargas e instálalo manualmente.")
-        }
-    }}
