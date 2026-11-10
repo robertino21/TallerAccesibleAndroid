@@ -409,4 +409,45 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
-    }}
+    }
+
+    private fun abrirInstalador(archivo: File) {
+        val contexto = getApplication<Application>()
+        
+        // Verificamos permiso
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (!contexto.packageManager.canRequestPackageInstalls()) {
+                val intentAjustes = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:${contexto.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                contexto.startActivity(intentAjustes)
+                entorno.decir("Activa el permiso para instalar apps y volvé a intentar.")
+                return
+            }
+        }
+
+        try {
+            // Obtenemos la URI segura con FileProvider
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                contexto,
+                "${contexto.packageName}.fileprovider",
+                archivo
+            )
+            
+            // Creamos el Intent para instalar
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                // ESTE FLAG ES CLAVE: Le da permiso de lectura al instalador
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) 
+            }
+            
+            contexto.startActivity(intent)
+            
+        } catch (e: Exception) {
+            entorno.decir("Error al abrir el instalador: ${e.message}")
+            entorno.decir("Buscá el archivo en la carpeta Descargas e instalalo manualmente.")
+        }
+    }
+} // <-- ESTA LLAVE CIERRA LA CLASE APPVIEWMODEL
