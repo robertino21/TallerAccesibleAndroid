@@ -97,10 +97,12 @@ class SimpleState {
         env.ejecutar({ ocupado = it }, "Error al generar la imagen") {
             val r = withContext(Dispatchers.Default) {
                 val s = Render.simple(env.app, t, l, e, p, y, a)
-                Almacen.publicar(env.app, s, "Texto", "imagen_texto", "Texto: ${t.take(150)}")
+                // Guardamos en caché, NO en la galería
+                val uri = Almacen.guardarTemporal(env.app, s.bitmap)
+                Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa generada", s.avisos)
             }
             resultado = r
-            env.decir("Imagen guardada en Imágenes, Taller Accesible")
+            env.decir("Vista previa lista. Puedes compartirla o guardarla.")
         }
     }
 
@@ -183,11 +185,13 @@ class CapasState {
         env.ejecutar({ ocupado = it }, "Error al generar las capas") {
             val r = withContext(Dispatchers.Default) {
                 val s = Render.capas(env.app, l, lista)
-                Almacen.publicar(env.app, s, "Texto", "capas", "Imagen de ${lista.size} capas")
+                // Guardamos en caché, NO en la galería
+                val uri = Almacen.guardarTemporal(env.app, s.bitmap)
+                Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa de capas", s.avisos)
             }
             resultado = r
             val extra = if (r.avisos.isEmpty()) "" else ". " + r.avisos.joinToString(". ")
-            env.decir("Capas guardadas en Imágenes, Taller Accesible$extra")
+            env.decir("Vista previa de capas lista.$extra")
         }
     }
 
@@ -466,42 +470,59 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     entorno.decir("Buscando $nombre...")
                 }
                 
-                // 1. Normalizamos el nombre (Google usa minúsculas y guiones bajos)
-                val nombreNormalizado = nombre.trim().lowercase().replace(" ", "_")
+                val busquedaNormalizada = nombre.trim().lowercase().replace(" ", "_")
                 
-                // 2. Vamos DIRECTO a la carpeta de la fuente
-                val urlCarpeta = URL("https://api.github.com/repos/google/fonts/contents/ofl/$nombreNormalizado")
-                val conexionCarpeta = urlCarpeta.openConnection() as HttpURLConnection
-                conexionCarpeta.setRequestProperty("User-Agent", "TallerAccesible-Android")
-                conexionCarpeta.connectTimeout = 10000
-                conexionCarpeta.readTimeout = 10000
+                val urlLista = URL("https://api.github.com/repos/google/fonts/contents/ofl")
+                val conexionLista = urlLista.openConnection() as HttpURLConnection
+                conexionLista.setRequestProperty("User-Agent", "TallerAccesible-Android")
+                conexionLista.connectTimeout = 10000
                 
-                if (conexionCarpeta.responseCode == 200) {
-                    // ¡La carpeta existe! Ahora buscamos el archivo .ttf
-                    val respuesta = conexionCarpeta.inputStream.bufferedReader().readText()
-                    val jsonArchivos = JSONArray(respuesta)
+                var carpetaEncontrada = ""
+                if (conexionLista.responseCode == 200) {
+                    val respuesta = conexionLista.inputStream.bufferedReader().readText()
+                    val jsonLista = JSONArray(respuesta)
                     
-                    var urlDescarga = ""
-                    for (i in 0 until jsonArchivos.length()) {
-                        val archivo = jsonArchivos.getJSONObject(i)
-                        val nombreArchivo = archivo.getString("name")
-                        if (nombreArchivo.endsWith(".ttf") || nombreArchivo.endsWith(".otf")) {
-                            urlDescarga = archivo.getString("download_url")
+                    for (i in 0 until jsonLista.length()) {
+                        val item = jsonLista.getJSONObject(i)
+                        val nombreCarpeta = item.getString("name").lowercase()
+                        if (nombreCarpeta.contains(busquedaNormalizada)) {
+                            carpetaEncontrada = item.getString("name")
                             break
                         }
                     }
+                }
+                
+                if (carpetaEncontrada.isNotEmpty()) {
+                    val urlArchivos = URL("https://api.github.com/repos/google/fonts/contents/ofl/$carpetaEncontrada")
+                    val conexionArchivos = urlArchivos.openConnection() as HttpURLConnection
+                    conexionArchivos.setRequestProperty("User-Agent", "TallerAccesible-Android")
+                    conexionArchivos.connectTimeout = 10000
                     
-                    if (urlDescarga.isNotEmpty()) {
-                        withContext(Dispatchers.Main) {
-                            resultadoBusqueda = urlDescarga
-                            nombreFuenteEncontrada = nombreNormalizado
-                            entorno.decir("Encontrada: $nombreNormalizado. Tocá descargar.")
+                    if (conexionArchivos.responseCode == 200) {
+                        val respuestaArchivos = conexionArchivos.inputStream.bufferedReader().readText()
+                        val jsonArchivos = JSONArray(respuestaArchivos)
+                        
+                        var urlDescarga = ""
+                        for (i in 0 until jsonArchivos.length()) {
+                            val archivo = jsonArchivos.getJSONObject(i)
+                            val nombreArchivo = archivo.getString("name")
+                            if (nombreArchivo.endsWith(".ttf") || nombreArchivo.endsWith(".otf")) {
+                                urlDescarga = archivo.getString("download_url")
+                                break
+                            }
                         }
-                    } else {
-                        withContext(Dispatchers.Main) { entorno.decir("No se encontró archivo .ttf en esa carpeta.") }
+                        
+                        if (urlDescarga.isNotEmpty()) {
+                            withContext(Dispatchers.Main) {
+                                resultadoBusqueda = urlDescarga
+                                nombreFuenteEncontrada = carpetaEncontrada
+                                entorno.decir("Encontrada: $carpetaEncontrada. Tocá descargar.")
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) { entorno.decir("No se encontró archivo de fuente en esa carpeta.") }
+                        }
                     }
                 } else {
-                    // Si da 404, la carpeta no existe
                     withContext(Dispatchers.Main) { entorno.decir("No se encontró '$nombre' en Google Fonts.") }
                 }
             } catch (e: Exception) {
