@@ -27,7 +27,7 @@ class ErrorUsuario(mensaje: String) : Exception(mensaje)
 class Salida(val bitmap: Bitmap, val png: Boolean, val avisos: List<String> = emptyList())
 
 /** Imagen ya guardada: miniatura para pantalla + URI + descripción para lectores de pantalla. */
-class Resultado(val vista: Bitmap, val uri: Uri?, val descripcion: String, val avisos: List<String> = emptyList())
+class Resultado(val vista: Bitmap, val uri: Uri?, val descripcion: String, val avisos: List<String> = emptyList(), val png: Boolean = false)
 
 // ============================================================
 // FUENTES
@@ -122,37 +122,7 @@ object Imagenes {
 // ALMACENAMIENTO (Galería)
 // ============================================================
 object Almacen {
-    fun guardar(ctx: Context, bmp: Bitmap, carpeta: String, base: String, png: Boolean): Uri {
-        val sello = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        val ext = if (png) "png" else "jpg"
-        val valores = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "${base}_$sello.$ext")
-            put(MediaStore.Images.Media.MIME_TYPE, if (png) "image/png" else "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/TallerAccesible/$carpeta")
-            put(MediaStore.Images.Media.IS_PENDING, 1)
-        }
-        val resolver = ctx.contentResolver
-        val uri = resolver.insert(MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), valores)
-            ?: throw IOException("No se pudo crear el archivo")
-        try {
-            val salida = resolver.openOutputStream(uri) ?: throw IOException("No se pudo abrir el archivo")
-            salida.use {
-                val formato = if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG
-                if (!bmp.compress(formato, 95, it)) throw IOException("No se pudo escribir la imagen")
-            }
-        } catch (e: Exception) {
-            resolver.delete(uri, null, null)
-            throw e
-        }
-        resolver.update(uri, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null)
-        return uri
-    }
-
-    fun publicar(ctx: Context, s: Salida, carpeta: String, base: String, detalle: String): Resultado {
-        val uri = guardar(ctx, s.bitmap, carpeta, base, s.png)
-        val desc = "Imagen de ${s.bitmap.width} por ${s.bitmap.height} píxeles. $detalle"
-        return Resultado(Imagenes.vista(s.bitmap), uri, desc, s.avisos)
-    }
+    private fun sello() = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
 
     fun copiar(ctx: Context, uri: Uri): Boolean = runCatching {
         val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -172,17 +142,39 @@ object Almacen {
         )
     }
 
-    // Recuperado para el botón Guardar
-    fun guardarEnGaleria(ctx: Context, uri: Uri, carpeta: String, base: String): Uri {
-        val bmp = MediaStore.Images.Media.getBitmap(ctx.contentResolver, uri)
-        return guardar(ctx, bmp, carpeta, base, false)
+    // Guarda la imagen tal cual está en la URI temporal, sin volver a comprimirla:
+    // así no se pierde calidad ni transparencia. La carpeta y el formato salen
+    // de la imagen misma (PNG si el fondo es transparente, JPG si no).
+    fun guardarEnGaleria(ctx: Context, uri: Uri, carpeta: String, base: String, png: Boolean): Uri {
+        val ext = if (png) "png" else "jpg"
+        val valores = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "${base}_${sello()}.$ext")
+            put(MediaStore.Images.Media.MIME_TYPE, if (png) "image/png" else "image/jpeg")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/TallerAccesible/$carpeta")
+            put(MediaStore.Images.Media.IS_PENDING, 1)
+        }
+        val resolver = ctx.contentResolver
+        val destino = resolver.insert(MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), valores)
+            ?: throw IOException("No se pudo crear el archivo")
+        try {
+            resolver.openInputStream(uri)?.use { entrada ->
+                resolver.openOutputStream(destino)?.use { salida ->
+                    entrada.copyTo(salida)
+                } ?: throw IOException("No se pudo abrir el archivo")
+            } ?: throw IOException("No se pudo leer la imagen")
+        } catch (e: Exception) {
+            resolver.delete(destino, null, null)
+            throw e
+        }
+        resolver.update(destino, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null)
+        return destino
     }
 
-    // Recuperado para guardar imágenes temporales
-    fun guardarTemporal(ctx: Context, bmp: Bitmap): Uri {
-        val archivo = File(ctx.cacheDir, "preview_taller.jpg")
+    // Vista previa temporal: PNG si la imagen tiene transparencia, JPG si no.
+    fun guardarTemporal(ctx: Context, bmp: Bitmap, png: Boolean): Uri {
+        val archivo = File(ctx.cacheDir, if (png) "preview_taller.png" else "preview_taller.jpg")
         archivo.outputStream().use { salida ->
-            bmp.compress(Bitmap.CompressFormat.JPEG, 95, salida)
+            bmp.compress(if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, 95, salida)
         }
         return androidx.core.content.FileProvider.getUriForFile(
             ctx,

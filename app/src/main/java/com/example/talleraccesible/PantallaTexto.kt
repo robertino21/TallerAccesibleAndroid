@@ -1,8 +1,11 @@
 package com.example.talleraccesible
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -15,7 +18,13 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -23,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalClipboardManager
+import kotlin.math.roundToInt
 
 @Composable
 fun PantallaTexto(vm: AppViewModel) {
@@ -54,7 +64,14 @@ private fun PanelSimple(vm: AppViewModel) {
              Row(verticalAlignment = Alignment.Top) {
                  OutlinedTextField(
                      value = s.texto, onValueChange = { s.texto = it },
-                     modifier = Modifier.weight(1f).heightIn(min = 120.dp).semantics { contentDescription = "Escribe tu texto aquí" },
+                     modifier = Modifier.weight(1f).heightIn(min = 120.dp).semantics { contentDescription = "Escribe tu texto aquí" }
+                         .onPreviewKeyEvent { ev ->
+                             if (ev.type == KeyEventType.KeyDown && ev.isCtrlPressed &&
+                                 (ev.key == Key.Enter || ev.key == Key.NumPadEnter)
+                             ) {
+                                 s.generar(env); true
+                             } else false
+                         },
                      placeholder = { Text("Escribe tu texto aquí...") }, shape = RoundedCornerShape(12.dp)
                  )
                  Spacer(Modifier.width(8.dp))
@@ -191,8 +208,15 @@ private fun PanelCapas(vm: AppViewModel) {
     var dlgRenombrar by remember { mutableStateOf(false) }
     var imagenPendiente by remember { mutableStateOf<Uri?>(null) }
     
-    val selectorImagen = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        if (uri != null) imagenPendiente = uri
+    val selectorImagen = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            // Permiso persistente: la plantilla guarda la URI y la app la puede
+            // volver a leer aunque se cierre y se vuelva a abrir.
+            runCatching {
+                ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            imagenPendiente = uri
+        }
     }
     
     LienzoEditorModerno(c.lienzo) { env.decir(it) }
@@ -223,15 +247,17 @@ private fun PanelCapas(vm: AppViewModel) {
              }
              val haySeleccion = c.capaActual != null
              BotonAccion("Agregar capa de texto", { dlgTexto = true }, principal = false)
-             BotonAccion("Agregar capa de imagen", { selectorImagen.launch("image/*") }, principal = false)
+             BotonAccion("Agregar capa de imagen", { selectorImagen.launch(arrayOf("image/*")) }, principal = false)
              BotonAccion("Renombrar capa", { dlgRenombrar = true }, enabled = haySeleccion, principal = false)
+             BotonAccion("Subir capa", { c.mover(-1, env) }, enabled = haySeleccion, principal = false)
+             BotonAccion("Bajar capa", { c.mover(1, env) }, enabled = haySeleccion, principal = false)
              BotonAccion("Eliminar capa", { c.eliminar(env) }, enabled = haySeleccion, principal = false)
              
              when (val capa = c.capaActual) {
                  null -> Text("Agrega o selecciona una capa")
                  is CapaTexto -> {
                      Seccion("Propiedades de ${capa.nombre}")
-                     CampoTexto("Contenido", capa.contenido, { c.actualizar(capa.copy(contenido = it)) }, lineas = 3)
+                     CampoTexto("Contenido", capa.contenido, { c.actualizar(capa.copy(contenido = it)) }, lineas = 3, onCtrlEnter = { c.generar(env) })
                      EstiloEditor(
                          e = capa.estilo, 
                          onChange = { c.actualizar(capa.copy(estilo = it)) }, 
@@ -435,7 +461,7 @@ fun CampoSlider(
         val cantidadPasos = ((rango.last - rango.first) / paso) - 1
         Slider(
             value = valor.toFloat(),
-            onValueChange = { onValor(it.toInt()) },
+            onValueChange = { onValor(it.roundToInt()) },
             valueRange = rango.first.toFloat()..rango.last.toFloat(),
             steps = if (cantidadPasos > 0) cantidadPasos else 0, 
             enabled = habilitado,
@@ -446,26 +472,46 @@ fun CampoSlider(
 
 @Composable
 fun PantallaVistaPrevia(vm: AppViewModel) {
-    val resultado: Resultado? = vm.texto.simple.resultado ?: vm.texto.capas.resultado
+    val resultado: Resultado? = vm.texto.resultadoActual()
     var zoom by remember { mutableStateOf(1f) }
     val context = LocalContext.current
-    
+    val env = vm.entorno
+
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
          Text("Vista Previa", fontSize = 24.sp, fontWeight = FontWeight.Bold)
          if (resultado != null) {
              Text("Zoom: ${(zoom * 100).toInt()}%", fontSize = 14.sp)
              Slider(value = zoom, onValueChange = { zoom = it }, valueRange = 0.5f..3f, modifier = Modifier.semantics { contentDescription = "Zoom de la imagen, valor actual ${(zoom * 100).toInt()} por ciento" })
              Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(4.dp)) {
-                 Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
-                     Box(modifier = Modifier.graphicsLayer(scaleX = zoom, scaleY = zoom)) {
-                         VistaPrevia(resultado)
-                     }
+                 // El zoom cambia el tamaño real de la imagen y se puede desplazar:
+                 // antes solo se escalaba el dibujo y se recortaba.
+                 BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(360.dp).horizontalScroll(rememberScrollState()).verticalScroll(rememberScrollState()).padding(8.dp)) {
+                     val lado = maxWidth * zoom
+                     val alto = lado * resultado.vista.height / resultado.vista.width
+                     Image(
+                         bitmap = resultado.vista.asImageBitmap(),
+                         contentDescription = resultado.descripcion,
+                         modifier = Modifier.size(lado, alto),
+                     )
                  }
              }
-             Button(
-                 onClick = { if (resultado.uri != null) Almacen.compartir(context, resultado.uri) },
-                 modifier = Modifier.fillMaxWidth().height(48.dp)
-             ) { Text("Compartir Imagen") }
+             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                 Button(
+                     onClick = { if (resultado.uri != null) Almacen.compartir(context, resultado.uri) },
+                     modifier = Modifier.weight(1f).height(48.dp)
+                 ) { Text("Compartir") }
+                 Button(
+                     onClick = {
+                         if (resultado.uri != null && Almacen.copiar(context, resultado.uri)) env.decir("Imagen copiada")
+                         else env.decir("No se pudo copiar la imagen")
+                     },
+                     modifier = Modifier.weight(1f).height(48.dp)
+                 ) { Text("Copiar") }
+                 Button(
+                     onClick = { vm.guardarActualEnGaleria() },
+                     modifier = Modifier.weight(1f).height(48.dp)
+                 ) { Text("Guardar") }
+             }
          } else {
              Text("Aún no has generado ninguna imagen.")
          }
@@ -499,12 +545,19 @@ fun PantallaAjustes(vm: AppViewModel) {
                  Spacer(Modifier.height(8.dp))
                  
                  if (vm.descargando) {
-                     LinearProgressIndicator(
-                         progress = { vm.progresoDescarga },
-                         modifier = Modifier.fillMaxWidth(),
-                     )
+                     if (vm.progresoDescarga < 0f) {
+                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                     } else {
+                         LinearProgressIndicator(
+                             progress = { vm.progresoDescarga },
+                             modifier = Modifier.fillMaxWidth(),
+                         )
+                     }
                      Spacer(Modifier.height(8.dp))
-                     Text("Descargando... ${(vm.progresoDescarga * 100).toInt()}%", fontSize = 14.sp)
+                     Text(
+                         if (vm.progresoDescarga < 0f) "Descargando..." else "Descargando... ${(vm.progresoDescarga * 100).toInt()}%",
+                         fontSize = 14.sp,
+                     )
                  } else {
                      Button(
                          onClick = { vm.buscarActualizacion() },
@@ -514,6 +567,21 @@ fun PantallaAjustes(vm: AppViewModel) {
                      }
                  }
              }
+         }
+
+         // Aviso de actualización: solo se descarga si el usuario lo confirma.
+         vm.actualizacionPendiente?.let { actualizacion ->
+             AlertDialog(
+                 onDismissRequest = { vm.descartarActualizacion() },
+                 title = { Text("Actualización disponible") },
+                 text = { Text("Hay una nueva versión: ${actualizacion.version}. La instalada es ${vm.versionInstalada()}. ¿Descargar e instalar?") },
+                 confirmButton = {
+                     TextButton(onClick = { vm.descargarActualizacion() }) { Text("Descargar") }
+                 },
+                 dismissButton = {
+                     TextButton(onClick = { vm.descartarActualizacion() }) { Text("Ahora no") }
+                 }
+             )
          }
 
          Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {

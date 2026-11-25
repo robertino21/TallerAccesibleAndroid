@@ -113,11 +113,61 @@ data class LienzoSpec(
     val opacidadFondo: Int = 100
 )
 
+// Capa guardada en una plantilla: solo datos simples, sin objetos de Android,
+// para que Gson pueda guardarla y leerla sin problemas.
+data class CapaPlantilla(
+    val tipo: String = "texto", // "texto" o "imagen"
+    val nombre: String = "",
+    val contenido: String = "",
+    val estilo: EstiloUi = EstiloUi.paraCapa(),
+    val xPct: Int = 50,
+    val yPct: Int = 50,
+    val escala: Int = 100,
+    val uri: String = "",
+)
+
 data class Plantilla(
     val nombre: String,
-    val estilo: EstiloUi,
-    val lienzoAncho: Int,
-    val lienzoAlto: Int,
-    val pos: String,
-    val yPct: Int
+    val modo: String = "Simple",
+    val estilo: EstiloUi = EstiloUi(),
+    val lienzoAncho: Int = 1080,
+    val lienzoAlto: Int = 1080,
+    val preset: String = "Personalizado",
+    val pos: String = "Centro",
+    val yPct: Int = 50,
+    val capas: List<CapaPlantilla> = emptyList(),
 )
+
+// Una plantilla vieja (solo modo Simple) no trae los campos nuevos: Gson los deja
+// en null o en cero. Esto la deja en un estado válido antes de usarla.
+fun Plantilla.saneada(): Plantilla {
+    val capasLimpias = (capas ?: emptyList()).map { c ->
+        c.copy(
+            tipo = if (c.tipo == "imagen") "imagen" else "texto",
+            nombre = c.nombre ?: "",
+            contenido = c.contenido ?: "",
+            estilo = c.estilo ?: EstiloUi.paraCapa(),
+            uri = c.uri ?: "",
+        )
+    }
+    return copy(
+        nombre = nombre ?: "Plantilla",
+        modo = if (modo == "Capas") "Capas" else "Simple",
+        estilo = estilo ?: EstiloUi(),
+        lienzoAncho = if (lienzoAncho > 0) lienzoAncho else 1080,
+        lienzoAlto = if (lienzoAlto > 0) lienzoAlto else 1080,
+        preset = preset ?: "Personalizado",
+        pos = pos ?: "Centro",
+        capas = capasLimpias,
+    )
+}
+
+fun Capa.aPlantilla(): CapaPlantilla = when (this) {
+    is CapaTexto -> CapaPlantilla("texto", nombre, contenido, estilo, xPct, yPct)
+    is CapaImagen -> CapaPlantilla("imagen", nombre, "", EstiloUi.paraCapa(), xPct, yPct, escala, uri.toString())
+}
+
+fun CapaPlantilla.aCapa(): Capa = when (tipo) {
+    "imagen" -> CapaImagen(nombre, Uri.parse(uri), escala, xPct, yPct)
+    else -> CapaTexto(nombre, contenido, estilo, xPct, yPct)
+}

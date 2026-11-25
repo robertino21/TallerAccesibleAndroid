@@ -131,17 +131,25 @@ object Render {
     // ---------- fondo ----------
     private class Fondo(val bitmap: Bitmap, val transparente: Boolean)
 
+    private fun conOpacidad(color: Int, op: Float): Int {
+        val a = (Color.alpha(color) * op).toInt().coerceIn(0, 255)
+        return Color.argb(a, Color.red(color), Color.green(color), Color.blue(color))
+    }
+
     private fun fondo(ctx: Context, l: LienzoSpec): Fondo {
         val bmp = Bitmap.createBitmap(l.ancho, l.alto, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val c1 = colorDe(l.color1)
         val c2 = colorDe(l.color2)
         var transparente = false
+        val op = l.opacidadFondo.coerceIn(0, 100) / 100f
         when {
             l.tipo == "Imagen" -> {
                 val uri = l.fondo ?: throw ErrorUsuario("Elige primero la imagen de fondo")
                 val img = Imagenes.cargar(ctx, uri).bitmap
-                c.drawBitmap(img, null, RectF(0f, 0f, l.ancho.toFloat(), l.alto.toFloat()), Paint(Paint.FILTER_BITMAP_FLAG))
+                val p = Paint(Paint.FILTER_BITMAP_FLAG).apply { alpha = (255 * op).toInt() }
+                c.drawBitmap(img, null, RectF(0f, 0f, l.ancho.toFloat(), l.alto.toFloat()), p)
+                transparente = op < 1f
             }
             l.tipo.contains("Degradado") -> {
                 if (c1 == null || c2 == null) throw ErrorUsuario("Elige los dos colores del degradado")
@@ -151,15 +159,16 @@ object Render {
                         0f, 0f,
                         if (vertical) 0f else l.ancho.toFloat(),
                         if (vertical) l.alto.toFloat() else 0f,
-                        c1, c2, Shader.TileMode.CLAMP,
+                        conOpacidad(c1, op), conOpacidad(c2, op), Shader.TileMode.CLAMP,
                     )
                 }
                 c.drawRect(0f, 0f, l.ancho.toFloat(), l.alto.toFloat(), p)
+                transparente = Color.alpha(conOpacidad(c1, op)) < 255 || Color.alpha(conOpacidad(c2, op)) < 255
             }
             else -> {
-                val col = c1 ?: Color.WHITE
+                val col = conOpacidad(c1 ?: Color.WHITE, op)
                 bmp.eraseColor(col)
-                transparente = Color.alpha(col) == 0
+                transparente = Color.alpha(col) < 255
             }
         }
         return Fondo(bmp, transparente)
@@ -199,7 +208,11 @@ object Render {
             else -> (h - b.alto) / 2f
         }
         dibujar(c, b, e, tam, left, top)
-        return Salida(f.bitmap, png = f.transparente)
+        val avisos = ArrayList<String>()
+        if (b.alto > h * 0.9f) {
+            avisos.add("El texto no entra en el lienzo, activa el ajuste automático o reduce el tamaño")
+        }
+        return Salida(f.bitmap, png = f.transparente, avisos = avisos)
     }
 
     // ============================================================

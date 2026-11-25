@@ -9,6 +9,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
@@ -50,9 +51,9 @@ fun TemaTaller(forzarOscuro: Boolean?, contenido: @Composable () -> Unit) {
     }
 }
 
-// LAS 3 PESTAÑAS (Usando iconos que ya sabemos que existen)
-private val TITULOS = listOf("Editor", "Vista previa", "Ajustes")
-private val ICONOS = listOf(Icons.Default.Edit, Icons.Default.Home, Icons.Default.Settings)
+// LAS 4 PESTAÑAS (Usando iconos que ya sabemos que existen)
+private val TITULOS = listOf("Editor", "Herramientas", "Vista previa", "Ajustes")
+private val ICONOS = listOf(Icons.Default.Edit, Icons.Default.Build, Icons.Default.Home, Icons.Default.Settings)
 
 @Composable
 fun Raiz(vm: AppViewModel = viewModel()) {
@@ -86,9 +87,10 @@ fun Raiz(vm: AppViewModel = viewModel()) {
     ) { margen ->
         Box(Modifier.padding(margen)) {
             when (vm.tab) {
-                0 -> PantallaTexto(vm) 
-                1 -> PantallaVistaPrevia(vm) 
-                2 -> PantallaAjustes(vm)     
+                0 -> PantallaTexto(vm)
+                1 -> PantallaHerramientas(vm)
+                2 -> PantallaVistaPrevia(vm)
+                3 -> PantallaAjustes(vm)
             }
         }
     }
@@ -100,11 +102,16 @@ private fun atajo(ev: KeyEvent, vm: AppViewModel): Boolean {
         Key.One -> { vm.tab = 0; true }
         Key.Two -> { vm.tab = 1; true }
         Key.Three -> { vm.tab = 2; true }
-        Key.G -> { 
-            if (vm.tab == 0) { vm.generarActual(); vm.tab = 1 } 
-            true 
+        Key.Four -> { vm.tab = 3; true }
+        Key.G -> {
+            if (vm.tab == 0) { vm.generarActual(); vm.tab = 2 }
+            true
         }
-        Key.L -> { vm.limpiarActual(); true }
+        Key.L -> {
+            if (vm.tab == 0) vm.limpiarActual()
+            else if (vm.tab == 1) vm.herramientas.limpiar(vm.entorno)
+            true
+        }
         else -> false
     }
 }
