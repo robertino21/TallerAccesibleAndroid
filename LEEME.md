@@ -37,7 +37,7 @@ Barra inferior con 4 pestañas (Ctrl+1..4 con teclado físico):
 | `QSpinBox`                         | Deslizadores con valor anunciado + botones de acción de TalkBack. Valida el rango               |
 | `QComboBox`                        | Botón "Etiqueta, valor actual" que abre un diálogo con lista de botones de radio                  |
 | `QCheckBox`                        | Fila completa como un único control (rol casilla de verificación)                                |
-| `QListWidget` (capas)              | Grupo de botones de radio: "2 de 3: Título, capa de texto" + botones Subir/Bajar                 |
+| `QListWidget` (capas)              | Grupo de botones de radio: "2 de 3: Título, capa de texto" + botones Subir/Bajar; la primera de la lista queda adelante |
 | `QGroupBox` / etiquetas de sección | Encabezados reales (TalkBack permite saltar de encabezado en encabezado)                         |
 | `QTabWidget` + Ctrl+1..4           | Barra de navegación inferior (rol pestaña) y Ctrl+1..4 con teclado físico                        |
 | Ctrl+Enter en el texto             | Igual, con teclado físico (genera la imagen)                                                     |

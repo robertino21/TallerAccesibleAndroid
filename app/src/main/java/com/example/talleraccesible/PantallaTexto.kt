@@ -227,7 +227,7 @@ private fun PanelCapas(vm: AppViewModel) {
              if (c.capas.isEmpty()) {
                  Text("Sin capas")
              } else {
-                 Text("El orden de la lista es el orden de dibujo.")
+                 Text("La primera de la lista queda adelante.")
                  Column(Modifier.selectableGroup()) {
                      c.capas.forEachIndexed { i, capa ->
                          val marcada = i == c.seleccion

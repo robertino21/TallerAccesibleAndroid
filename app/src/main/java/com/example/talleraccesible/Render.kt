@@ -225,7 +225,10 @@ object Render {
         val h = l.alto.toFloat()
         val avisos = ArrayList<String>()
 
-        for (capa in capas) {
+        // Se dibuja al revés que la lista: la primera de la lista se dibuja
+        // última y queda adelante. Así lo de arriba en la lista se ve adelante,
+        // Subir trae para adelante y Bajar manda para atrás, sin confusiones.
+        for (capa in capas.asReversed()) {
             when (capa) {
                 is CapaImagen -> {
                     try {
