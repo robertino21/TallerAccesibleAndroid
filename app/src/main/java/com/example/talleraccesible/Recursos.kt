@@ -6,6 +6,9 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ImageDecoder
 import android.graphics.Typeface
 import android.net.Uri
@@ -162,6 +165,40 @@ object Almacen {
                     entrada.copyTo(salida)
                 } ?: throw IOException("No se pudo abrir el archivo")
             } ?: throw IOException("No se pudo leer la imagen")
+        } catch (e: Exception) {
+            resolver.delete(destino, null, null)
+            throw e
+        }
+        resolver.update(destino, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null)
+        return destino
+    }
+
+    // Guarda volviendo a codificar (para cambiar de formato): PNG sin pérdida,
+    // JPG con la calidad elegida y el fondo transparente sobre blanco.
+    fun guardarBitmapEnGaleria(ctx: Context, uri: Uri, carpeta: String, base: String, png: Boolean, calidad: Int): Uri {
+        val bmp = ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+            ?: throw IOException("No se pudo leer la imagen")
+        val final = if (!png && bmp.hasAlpha()) {
+            Bitmap.createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888).also {
+                val c = Canvas(it)
+                c.drawColor(Color.WHITE)
+                c.drawBitmap(bmp, 0f, 0f, null)
+            }
+        } else bmp
+        val ext = if (png) "png" else "jpg"
+        val valores = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "${base}_${sello()}.$ext")
+            put(MediaStore.Images.Media.MIME_TYPE, if (png) "image/png" else "image/jpeg")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/TallerAccesible/$carpeta")
+            put(MediaStore.Images.Media.IS_PENDING, 1)
+        }
+        val resolver = ctx.contentResolver
+        val destino = resolver.insert(MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), valores)
+            ?: throw IOException("No se pudo crear el archivo")
+        try {
+            resolver.openOutputStream(destino)?.use { salida ->
+                final.compress(if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, calidad, salida)
+            } ?: throw IOException("No se pudo abrir el archivo")
         } catch (e: Exception) {
             resolver.delete(destino, null, null)
             throw e

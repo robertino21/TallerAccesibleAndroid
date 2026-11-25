@@ -336,22 +336,65 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         entorno.decir("Lienzo limpiado")
     }
 
-    fun guardarActualEnGaleria() {
-        guardarResultadoEnGaleria(texto.resultadoActual(), "Texto")
+    // Opciones del diálogo al guardar: formato, calidad JPG y carpeta.
+    var dlgGuardarVisible by mutableStateOf(false)
+        private set
+    var dlgGuardarResultado by mutableStateOf<Resultado?>(null)
+        private set
+    var dlgGuardarCarpeta by mutableStateOf("Texto")
+    var dlgGuardarFormato by mutableStateOf("Automático")
+    var dlgGuardarCalidad by mutableIntStateOf(95)
+
+    // Abre el diálogo de opciones para guardar el resultado indicado.
+    fun pedirGuardar(r: Resultado?, carpeta: String) {
+        if (r == null || r.uri == null) {
+            entorno.decir("Primero genera una imagen")
+            return
+        }
+        dlgGuardarResultado = r
+        dlgGuardarCarpeta = carpeta
+        dlgGuardarFormato = "Automático"
+        dlgGuardarCalidad = 95
+        dlgGuardarVisible = true
+    }
+
+    fun cancelarGuardar() {
+        dlgGuardarVisible = false
+        dlgGuardarResultado = null
+    }
+
+    fun confirmarGuardar() {
+        val r = dlgGuardarResultado
+        val carpeta = dlgGuardarCarpeta
+        val formato = dlgGuardarFormato
+        val calidad = dlgGuardarCalidad
+        dlgGuardarVisible = false
+        dlgGuardarResultado = null
+        guardarResultadoEnGaleria(r, carpeta, formato, calidad)
     }
 
     // Guarda el resultado que se le pasa, en la carpeta de galería indicada,
-    // conservando el formato (PNG si tiene transparencia, JPG si no).
-    fun guardarResultadoEnGaleria(r: Resultado?, carpeta: String) {
+    // con el formato elegido (Automático = PNG si tiene transparencia, JPG si no).
+    fun guardarResultadoEnGaleria(r: Resultado?, carpeta: String, formato: String = "Automático", calidad: Int = 95) {
         if (r == null || r.uri == null) {
             entorno.decir("Primero genera una imagen")
             return
         }
         val uri = r.uri
-        val png = r.png
+        val png = when (formato) {
+            "PNG" -> true
+            "JPG" -> false
+            else -> r.png
+        }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                Almacen.guardarEnGaleria(getApplication(), uri, carpeta, "imagen_taller", png)
+                if (png == r.png) {
+                    // Mismo formato que el temporal: se copian los bytes sin recomprimir.
+                    Almacen.guardarEnGaleria(getApplication(), uri, carpeta, "imagen_taller", png)
+                } else {
+                    // Otro formato: se vuelve a codificar desde el temporal.
+                    Almacen.guardarBitmapEnGaleria(getApplication(), uri, carpeta, "imagen_taller", png, calidad)
+                }
                 withContext(Dispatchers.Main) {
                     entorno.decir("Imagen guardada en la galería")
                 }

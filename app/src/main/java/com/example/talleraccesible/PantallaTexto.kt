@@ -152,7 +152,7 @@ private fun PanelSimple(vm: AppViewModel) {
          ) { Text("Compartir", fontSize = 14.sp) }
 
          Button(
-             onClick = { vm.guardarActualEnGaleria() },
+             onClick = { vm.pedirGuardar(s.resultado, "Texto") },
              enabled = s.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Guardar", fontSize = 14.sp) }
@@ -304,7 +304,18 @@ private fun PanelCapas(vm: AppViewModel) {
          ) { Text("Compartir", fontSize = 14.sp) }
 
          Button(
-             onClick = { vm.guardarActualEnGaleria() },
+             onClick = {
+                 val r = c.resultado
+                 val u = r?.uri
+                 if (u != null && Almacen.copiar(ctx, u)) env.decir("Imagen copiada")
+                 else env.decir("No se pudo copiar la imagen")
+             },
+             enabled = c.resultado != null,
+             modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
+         ) { Text("Copiar", fontSize = 14.sp) }
+
+         Button(
+             onClick = { vm.pedirGuardar(c.resultado, "Texto") },
              enabled = c.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Guardar", fontSize = 14.sp) }
@@ -483,16 +494,25 @@ fun PantallaVistaPrevia(vm: AppViewModel) {
              Text("Zoom: ${(zoom * 100).toInt()}%", fontSize = 14.sp)
              Slider(value = zoom, onValueChange = { zoom = it }, valueRange = 0.5f..3f, modifier = Modifier.semantics { contentDescription = "Zoom de la imagen, valor actual ${(zoom * 100).toInt()} por ciento" })
              Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(4.dp)) {
-                 // El zoom cambia el tamaño real de la imagen y se puede desplazar:
-                 // antes solo se escalaba el dibujo y se recortaba.
-                 BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(360.dp).horizontalScroll(rememberScrollState()).verticalScroll(rememberScrollState()).padding(8.dp)) {
+                 // El zoom cambia el tamaño real de la imagen y se puede desplazar.
+                 // El ancho se mide en el contenedor de fuera, sin desplazamiento:
+                 // con el desplazamiento en el mismo contenedor, el ancho
+                 // disponible era infinito y la imagen nunca cambiaba de tamaño.
+                 BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(360.dp)) {
                      val lado = maxWidth * zoom
                      val alto = lado * resultado.vista.height / resultado.vista.width
-                     Image(
-                         bitmap = resultado.vista.asImageBitmap(),
-                         contentDescription = resultado.descripcion,
-                         modifier = Modifier.size(lado, alto),
-                     )
+                     Box(
+                         modifier = Modifier.fillMaxSize()
+                             .horizontalScroll(rememberScrollState())
+                             .verticalScroll(rememberScrollState())
+                             .padding(8.dp)
+                     ) {
+                         Image(
+                             bitmap = resultado.vista.asImageBitmap(),
+                             contentDescription = resultado.descripcion,
+                             modifier = Modifier.size(lado, alto),
+                         )
+                     }
                  }
              }
              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -508,7 +528,7 @@ fun PantallaVistaPrevia(vm: AppViewModel) {
                      modifier = Modifier.weight(1f).height(48.dp)
                  ) { Text("Copiar") }
                  Button(
-                     onClick = { vm.guardarActualEnGaleria() },
+                     onClick = { vm.pedirGuardar(resultado, "Texto") },
                      modifier = Modifier.weight(1f).height(48.dp)
                  ) { Text("Guardar") }
              }
@@ -516,6 +536,33 @@ fun PantallaVistaPrevia(vm: AppViewModel) {
              Text("Aún no has generado ninguna imagen.")
          }
      }
+}
+
+// Diálogo con las opciones al guardar: formato, calidad JPG y carpeta.
+@Composable
+fun DialogoGuardar(vm: AppViewModel) {
+    val formatos = listOf("Automático", "PNG", "JPG")
+    val carpetas = listOf("Texto", "Recortadas", "Normalizadas", "Collages")
+    AlertDialog(
+        onDismissRequest = { vm.cancelarGuardar() },
+        title = { Text("Guardar imagen") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CampoLista("Formato", formatos, vm.dlgGuardarFormato, { vm.dlgGuardarFormato = it })
+                if (vm.dlgGuardarFormato != "PNG") {
+                    CampoSlider("Calidad JPG (%)", vm.dlgGuardarCalidad, 70..100, { vm.dlgGuardarCalidad = it }, paso = 5)
+                }
+                CampoLista("Carpeta", carpetas, vm.dlgGuardarCarpeta, { vm.dlgGuardarCarpeta = it })
+                Text("Automático guarda PNG si el fondo es transparente y JPG si no.")
+            }
+        },
+        confirmButton = {
+            Button(onClick = { vm.confirmarGuardar() }) { Text("Guardar") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = { vm.cancelarGuardar() }) { Text("Cancelar") }
+        },
+    )
 }
 
 @Composable

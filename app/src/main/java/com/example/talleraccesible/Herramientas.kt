@@ -61,7 +61,7 @@ private fun AccionesResultado(r: Resultado, vm: AppViewModel, carpeta: String) {
             modifier = Modifier.weight(1f).height(48.dp)
         ) { Text("Copiar", fontSize = 14.sp) }
         Button(
-            onClick = { vm.guardarResultadoEnGaleria(r, carpeta) },
+            onClick = { vm.pedirGuardar(r, carpeta) },
             modifier = Modifier.weight(1f).height(48.dp)
         ) { Text("Guardar", fontSize = 14.sp) }
     }

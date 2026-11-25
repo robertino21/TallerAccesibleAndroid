@@ -93,6 +93,7 @@ fun Raiz(vm: AppViewModel = viewModel()) {
                 3 -> PantallaAjustes(vm)
             }
         }
+        if (vm.dlgGuardarVisible) DialogoGuardar(vm)
     }
 }
 

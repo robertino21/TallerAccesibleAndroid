@@ -25,7 +25,7 @@ Barra inferior con 4 pestañas (Ctrl+1..4 con teclado físico):
 
 1. **Editor** — Texto en modo Simple y modo Capas.
 2. **Herramientas** — Cortador, Normalizar y Collage.
-3. **Vista previa** — imagen generada, con zoom, Compartir, Copiar y Guardar.
+3. **Vista previa** — imagen generada, con zoom real (el tamaño cambia de verdad y se puede desplazar), Compartir, Copiar y Guardar.
 4. **Ajustes** — tema, actualizaciones y plantillas.
 
 ## Equivalencias de accesibilidad (escritorio → Android)
@@ -50,8 +50,10 @@ Barra inferior con 4 pestañas (Ctrl+1..4 con teclado físico):
 
 Galería, en `Imágenes/TallerAccesible/{Texto, Recortadas, Normalizadas, Collages}`, con fecha y hora en el nombre
 (el original sobrescribía siempre el mismo archivo). No se piden permisos de almacenamiento.
-La vista previa es temporal y se guarda en caché (PNG si el fondo es transparente, JPG si no);
-al guardar en la galería se copia tal cual, sin volver a comprimir.
+La vista previa es temporal y se guarda en caché (PNG si el fondo es transparente, JPG si no).
+Al tocar Guardar se abre un diálogo con las opciones: formato (Automático, PNG o JPG),
+calidad JPG (70–100, por defecto 95) y carpeta; con Automático se conserva el formato del
+temporal sin volver a comprimir, y al cambiar de formato se vuelve a codificar (JPG sobre blanco).
 
 ## Fuentes
 
