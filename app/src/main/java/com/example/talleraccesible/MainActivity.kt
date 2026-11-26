@@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
@@ -59,10 +60,17 @@ private val ICONOS = listOf(Icons.Default.Edit, Icons.Default.Build, Icons.Defau
 fun Raiz(vm: AppViewModel = viewModel()) {
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val vista = LocalView.current
 
     SideEffect {
         vm.entorno.decir = { mensaje ->
             scope.launch {
+                // Jieshuo no anuncia los Snackbar (por eso no se oía ni
+                // "Ya estás al día" ni "Imagen guardada en la galería"),
+                // así que el mensaje también se anuncia como evento de
+                // accesibilidad, que Jieshuo sí lee. El Snackbar queda
+                // para quien ve la pantalla.
+                vista.announceForAccessibility(mensaje)
                 snack.currentSnackbarData?.dismiss()
                 snack.showSnackbar(mensaje)
             }
