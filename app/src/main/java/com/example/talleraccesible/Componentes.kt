@@ -1,6 +1,7 @@
 package com.example.talleraccesible
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,7 +49,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 // ------------------------------------------------------------
 // Encabezados (TalkBack permite saltar de encabezado en encabezado)
@@ -139,34 +142,6 @@ fun CampoCheck(label: String, marcado: Boolean, onChange: (Boolean) -> Unit, ena
     }
 }
 
-// ------------------------------------------------------------
-// Reemplazo de AccessiblePlainTextEdit (Ctrl+Enter genera)
-// ------------------------------------------------------------
-@Composable
-fun CampoTexto(
-    label: String,
-    valor: String,
-    onChange: (String) -> Unit,
-    lineas: Int = 3,
-    onCtrlEnter: (() -> Unit)? = null,
-) {
-    OutlinedTextField(
-        value = valor,
-        onValueChange = onChange,
-        label = { Text(label) },
-        minLines = lineas,
-        modifier = Modifier
-            .fillMaxWidth()
-            .onPreviewKeyEvent { ev ->
-                if (onCtrlEnter != null && ev.type == KeyEventType.KeyDown && ev.isCtrlPressed &&
-                    (ev.key == Key.Enter || ev.key == Key.NumPadEnter)
-                ) {
-                    onCtrlEnter(); true
-                } else false
-            },
-    )
-}
-
 @Composable
 fun BotonAccion(texto: String, onClick: () -> Unit, enabled: Boolean = true, principal: Boolean = true) {
     val mod = Modifier.fillMaxWidth().heightIn(min = 48.dp)
@@ -208,19 +183,21 @@ fun DialogoNombre(
         onDismissRequest = onCancelar,
         title = { Text(titulo) },
         text = {
-            OutlinedTextField(
-                value = nombre,
-                onValueChange = { nombre = it; error = null },
-                label = { Text("Nombre de la capa") },
-                singleLine = true,
-                isError = error != null,
-                supportingText = {
-                    error?.let {
-                        Text(it, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                    }
-                },
-                modifier = Modifier.focusRequester(foco),
-            )
+            Column(Modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Nombre de la capa", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                OutlinedTextField(
+                    value = nombre,
+                    onValueChange = { nombre = it; error = null },
+                    singleLine = true,
+                    isError = error != null,
+                    supportingText = {
+                        error?.let {
+                            Text(it, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().focusRequester(foco),
+                )
+            }
         },
         confirmButton = {
             TextButton(onClick = {

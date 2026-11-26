@@ -62,19 +62,21 @@ private fun PanelSimple(vm: AppViewModel) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
          Column(Modifier.padding(16.dp)) {
              Row(verticalAlignment = Alignment.Top) {
-                 OutlinedTextField(
-                     value = s.texto, onValueChange = { s.texto = it },
-                     label = { Text("Texto") },
-                     modifier = Modifier.weight(1f).heightIn(min = 120.dp)
-                         .onPreviewKeyEvent { ev ->
-                             if (ev.type == KeyEventType.KeyDown && ev.isCtrlPressed &&
-                                 (ev.key == Key.Enter || ev.key == Key.NumPadEnter)
-                             ) {
-                                 s.generar(env); true
-                             } else false
-                         },
-                     placeholder = { Text("Escribe tu texto aquí...") }, shape = RoundedCornerShape(12.dp)
-                 )
+                 Column(Modifier.weight(1f).semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                     Text("Texto", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                     OutlinedTextField(
+                         value = s.texto, onValueChange = { s.texto = it },
+                         modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp)
+                             .onPreviewKeyEvent { ev ->
+                                 if (ev.type == KeyEventType.KeyDown && ev.isCtrlPressed &&
+                                     (ev.key == Key.Enter || ev.key == Key.NumPadEnter)
+                                 ) {
+                                     s.generar(env); true
+                                 } else false
+                             },
+                         placeholder = { Text("Escribe tu texto aquí...") }, shape = RoundedCornerShape(12.dp)
+                     )
+                 }
                  Spacer(Modifier.width(8.dp))
                  Column {
                      Button(
@@ -260,20 +262,22 @@ private fun PanelCapas(vm: AppViewModel) {
                  is CapaTexto -> {
                      Seccion("Propiedades de ${capa.nombre}")
                      Row(verticalAlignment = Alignment.Top) {
-                         OutlinedTextField(
-                             value = capa.contenido, onValueChange = { c.actualizar(capa.copy(contenido = it)) },
-                             label = { Text("Contenido") },
-                             minLines = 3,
-                             modifier = Modifier.weight(1f)
-                                 .onPreviewKeyEvent { ev ->
-                                     if (ev.type == KeyEventType.KeyDown && ev.isCtrlPressed &&
-                                         (ev.key == Key.Enter || ev.key == Key.NumPadEnter)
-                                     ) {
-                                         c.generar(env); true
-                                     } else false
-                                 },
-                             shape = RoundedCornerShape(12.dp)
-                         )
+                         Column(Modifier.weight(1f).semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                             Text("Contenido", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                             OutlinedTextField(
+                                 value = capa.contenido, onValueChange = { c.actualizar(capa.copy(contenido = it)) },
+                                 minLines = 3,
+                                 modifier = Modifier.fillMaxWidth()
+                                     .onPreviewKeyEvent { ev ->
+                                         if (ev.type == KeyEventType.KeyDown && ev.isCtrlPressed &&
+                                             (ev.key == Key.Enter || ev.key == Key.NumPadEnter)
+                                         ) {
+                                             c.generar(env); true
+                                         } else false
+                                     },
+                                 shape = RoundedCornerShape(12.dp)
+                             )
+                         }
                          Spacer(Modifier.width(8.dp))
                          Column {
                              Button(
@@ -409,12 +413,15 @@ private fun EstiloEditor(
             title = { Text("Buscar en Google Fonts") },
             text = {
                 Column {
-                    OutlinedTextField(
-                        value = textoBusqueda,
-                        onValueChange = { textoBusqueda = it },
-                        label = { Text("Ej: Montserrat, Roboto...") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Buscar fuente", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                        OutlinedTextField(
+                            value = textoBusqueda,
+                            onValueChange = { textoBusqueda = it },
+                            placeholder = { Text("Ej: Montserrat, Roboto...") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     Spacer(Modifier.height(16.dp))
                     Button(
                         onClick = { onBuscarFuente?.invoke(textoBusqueda) },
@@ -669,10 +676,13 @@ fun PantallaAjustes(vm: AppViewModel) {
          Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
              Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                  Text("Plantillas", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                 OutlinedTextField(
-                     value = nombrePlantilla, onValueChange = { nombrePlantilla = it },
-                     label = { Text("Nombre de la plantilla") }, modifier = Modifier.fillMaxWidth()
-                 )
+                 Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                     Text("Nombre de la plantilla", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                     OutlinedTextField(
+                         value = nombrePlantilla, onValueChange = { nombrePlantilla = it },
+                         modifier = Modifier.fillMaxWidth()
+                     )
+                 }
                  Button(
                      onClick = { vm.guardarPlantilla(nombrePlantilla); nombrePlantilla = "" }, 
                      modifier = Modifier.fillMaxWidth()
