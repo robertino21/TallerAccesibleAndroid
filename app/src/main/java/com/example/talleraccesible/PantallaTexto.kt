@@ -78,7 +78,8 @@ private fun PanelSimple(vm: AppViewModel) {
                      )
                  }
                  Spacer(Modifier.width(8.dp))
-                 Column {
+                 // Los botones quedan a la altura del cuadro, no de la etiqueta fija de arriba (etiqueta ~20 dp + 4 dp de separación).
+                 Column(Modifier.padding(top = 24.dp)) {
                      Button(
                          onClick = { s.texto = clipboard.getText()?.text ?: ""; env.decir("Texto pegado") },
                          modifier = Modifier.padding(top = 8.dp), shape = RoundedCornerShape(8.dp)
@@ -279,7 +280,8 @@ private fun PanelCapas(vm: AppViewModel) {
                              )
                          }
                          Spacer(Modifier.width(8.dp))
-                         Column {
+                         // Los botones quedan a la altura del cuadro, no de la etiqueta fija de arriba (etiqueta ~20 dp + 4 dp de separación).
+                         Column(Modifier.padding(top = 24.dp)) {
                              Button(
                                  onClick = { c.actualizar(capa.copy(contenido = clipboard.getText()?.text ?: "")); env.decir("Texto pegado") },
                                  modifier = Modifier.padding(top = 8.dp), shape = RoundedCornerShape(8.dp)
