@@ -94,11 +94,11 @@ private fun PanelSimple(vm: AppViewModel) {
                  }
              }
              Spacer(Modifier.height(20.dp))
-             Row(verticalAlignment = Alignment.CenterVertically) {
-                 Checkbox(checked = s.auto, onCheckedChange = { s.auto = it })
-                 Spacer(Modifier.width(8.dp))
-                 Text("Ajustar tamaño automáticamente", fontSize = 16.sp)
-             }
+             CampoCheck(
+                 label = "Ajustar tamaño automáticamente",
+                 marcado = s.auto,
+                 onChange = { s.auto = it },
+             )
          }
      }
      
