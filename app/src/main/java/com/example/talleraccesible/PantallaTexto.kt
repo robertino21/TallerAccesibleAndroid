@@ -64,7 +64,8 @@ private fun PanelSimple(vm: AppViewModel) {
              Row(verticalAlignment = Alignment.Top) {
                  OutlinedTextField(
                      value = s.texto, onValueChange = { s.texto = it },
-                     modifier = Modifier.weight(1f).heightIn(min = 120.dp).semantics { contentDescription = "Escribe tu texto aquí" }
+                     label = { Text("Texto") },
+                     modifier = Modifier.weight(1f).heightIn(min = 120.dp)
                          .onPreviewKeyEvent { ev ->
                              if (ev.type == KeyEventType.KeyDown && ev.isCtrlPressed &&
                                  (ev.key == Key.Enter || ev.key == Key.NumPadEnter)
@@ -203,6 +204,7 @@ private fun PanelCapas(vm: AppViewModel) {
     val env = vm.entorno
     val c = vm.texto.capas
     val ctx = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val importar = rememberImportadorFuentes(vm)
     var dlgTexto by remember { mutableStateOf(false) }
     var dlgRenombrar by remember { mutableStateOf(false) }
@@ -257,7 +259,40 @@ private fun PanelCapas(vm: AppViewModel) {
                  null -> Text("Agrega o selecciona una capa")
                  is CapaTexto -> {
                      Seccion("Propiedades de ${capa.nombre}")
-                     CampoTexto("Contenido", capa.contenido, { c.actualizar(capa.copy(contenido = it)) }, lineas = 3, onCtrlEnter = { c.generar(env) })
+                     Row(verticalAlignment = Alignment.Top) {
+                         OutlinedTextField(
+                             value = capa.contenido, onValueChange = { c.actualizar(capa.copy(contenido = it)) },
+                             label = { Text("Contenido") },
+                             minLines = 3,
+                             modifier = Modifier.weight(1f)
+                                 .onPreviewKeyEvent { ev ->
+                                     if (ev.type == KeyEventType.KeyDown && ev.isCtrlPressed &&
+                                         (ev.key == Key.Enter || ev.key == Key.NumPadEnter)
+                                     ) {
+                                         c.generar(env); true
+                                     } else false
+                                 },
+                             shape = RoundedCornerShape(12.dp)
+                         )
+                         Spacer(Modifier.width(8.dp))
+                         Column {
+                             Button(
+                                 onClick = { c.actualizar(capa.copy(contenido = clipboard.getText()?.text ?: "")); env.decir("Texto pegado") },
+                                 modifier = Modifier.padding(top = 8.dp), shape = RoundedCornerShape(8.dp)
+                             ) { Text("Pegar") }
+
+                             Spacer(Modifier.height(8.dp))
+
+                             OutlinedButton(
+                                 onClick = { c.actualizar(capa.copy(contenido = "")); env.decir("Texto borrado") },
+                                 modifier = Modifier.height(40.dp),
+                                 shape = RoundedCornerShape(8.dp),
+                                 contentPadding = PaddingValues(horizontal = 8.dp)
+                             ) {
+                                 Icon(imageVector = Icons.Default.Delete, contentDescription = "Borrar texto")
+                             }
+                         }
+                     }
                      EstiloEditor(
                          e = capa.estilo, 
                          onChange = { c.actualizar(capa.copy(estilo = it)) }, 
