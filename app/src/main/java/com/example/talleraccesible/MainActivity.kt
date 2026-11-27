@@ -15,9 +15,13 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalContext
@@ -61,6 +65,13 @@ fun Raiz(vm: AppViewModel = viewModel()) {
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val vista = LocalView.current
+    var mostrarManual by remember { mutableStateOf(false) }
+
+    // Al abrir la aplicación se revisa si hay una versión nueva, sin
+    // molestar: solo avisa cuando la hay.
+    LaunchedEffect(Unit) {
+        vm.buscarActualizacion(silencioso = true)
+    }
 
     SideEffect {
         vm.entorno.decir = { mensaje ->
@@ -81,27 +92,47 @@ fun Raiz(vm: AppViewModel = viewModel()) {
         modifier = Modifier.onPreviewKeyEvent { atajo(it, vm) },
         snackbarHost = { SnackbarHost(snack) },
         bottomBar = {
-            NavigationBar {
-                TITULOS.forEachIndexed { i, titulo ->
-                    NavigationBarItem(
-                        selected = vm.tab == i,
-                        onClick = { vm.tab = i },
-                        icon = { Icon(ICONOS[i], contentDescription = null) },
-                        label = { Text(titulo) },
-                    )
+            if (!mostrarManual) {
+                NavigationBar {
+                    TITULOS.forEachIndexed { i, titulo ->
+                        NavigationBarItem(
+                            selected = vm.tab == i,
+                            onClick = { vm.tab = i },
+                            icon = { Icon(ICONOS[i], contentDescription = null) },
+                            label = { Text(titulo) },
+                        )
+                    }
                 }
             }
         },
     ) { margen ->
         Box(Modifier.padding(margen)) {
-            when (vm.tab) {
-                0 -> PantallaTexto(vm)
-                1 -> PantallaHerramientas(vm)
-                2 -> PantallaVistaPrevia(vm)
-                3 -> PantallaAjustes(vm)
+            if (mostrarManual) {
+                PantallaManual(onVolver = { mostrarManual = false })
+            } else {
+                when (vm.tab) {
+                    0 -> PantallaTexto(vm)
+                    1 -> PantallaHerramientas(vm)
+                    2 -> PantallaVistaPrevia(vm)
+                    3 -> PantallaAjustes(vm, onVerManual = { mostrarManual = true })
+                }
             }
         }
         if (vm.dlgGuardarVisible) DialogoGuardar(vm)
+        // Aviso de actualización: solo se descarga si el usuario lo confirma.
+        vm.actualizacionPendiente?.let { actualizacion ->
+            AlertDialog(
+                onDismissRequest = { vm.descartarActualizacion() },
+                title = { Text("Actualización disponible") },
+                text = { Text("Hay una nueva versión: ${actualizacion.version}. La instalada es ${vm.versionInstalada()}. ¿Descargar e instalar?") },
+                confirmButton = {
+                    TextButton(onClick = { vm.descargarActualizacion() }) { Text("Descargar") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { vm.descartarActualizacion() }) { Text("Ahora no") }
+                }
+            )
+        }
     }
 }
 

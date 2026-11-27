@@ -444,7 +444,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return false
     }
 
-    fun buscarActualizacion() {
+    // Si silencioso es true, solo avisa cuando hay una versión nueva:
+    // si no hay nada nuevo, no hay internet o falla la consulta, no dice nada.
+    // Sirve para la revisión automática al abrir la aplicación.
+    fun buscarActualizacion(silencioso: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val url = URL("https://api.github.com/repos/robertino21/TallerAccesibleAndroid/releases/latest")
@@ -473,8 +476,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val instalada = versionInstalada()
                     withContext(Dispatchers.Main) {
                         when {
-                            urlDescarga == null -> entorno.decir("No hay archivo APK en la última versión.")
-                            !esMasNueva(tagVersion, instalada) -> entorno.decir("Ya estás al día, versión $instalada.")
+                            urlDescarga == null -> if (!silencioso) entorno.decir("No hay archivo APK en la última versión.")
+                            !esMasNueva(tagVersion, instalada) -> if (!silencioso) entorno.decir("Ya estás al día, versión $instalada.")
                             else -> {
                                 actualizacionPendiente = Actualizacion(tagVersion, urlDescarga)
                                 entorno.decir("Hay una nueva versión: $tagVersion. Revisa el aviso para descargarla.")
@@ -483,12 +486,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        entorno.decir("No se pudo verificar la actualización o ya estás al día.")
+                        if (!silencioso) entorno.decir("No se pudo verificar la actualización o ya estás al día.")
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    entorno.decir("Error: ${e.message ?: "Desconocido"}")
+                    if (!silencioso) entorno.decir("Error: ${e.message ?: "Desconocido"}")
                 }
             }
         }

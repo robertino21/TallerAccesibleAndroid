@@ -1,0 +1,252 @@
+MANUAL DE TALLER ACCESIBLE PARA ANDROID
+Para personas ciegas, con TalkBack
+Versión 1.6.12
+26 de noviembre de 2026
+
+Este manual explica cómo usar Taller Accesible en Android, un
+programa para crear imágenes con texto, recortar fotos,
+normalizar fotos y hacer collages. Está pensado para usarlo con
+TalkBack.
+
+1. Qué es y qué necesita
+
+Taller Accesible para Android es un programa para el teléfono.
+Se usa con TalkBack. La versión actual es la 1.6.12. Se instala
+con el archivo APK, y después se actualiza desde la misma
+aplicación.
+
+Para actualizar, vaya a la pestaña Ajustes y toque Buscar
+actualizaciones. Si hay una versión nueva, la aplicación
+pregunta antes de descargar. Toque Descargar para instalarla o
+Ahora no para dejarlo para después. Nunca descarga sola. Además, la aplicación revisa sola si hay una versión nueva cada vez que se abre. Si la hay, avisa con el mismo cartel para descargar o dejarlo para después. Si no hay nada nuevo, no dice nada. Desde la versión 1.6.8, la aplicación también anuncia los mensajes, como el de actualización y el de imagen guardada, para que los lea Jieshuo, el lector de pantalla chino, además de TalkBack. Desde la versión 1.6.9, la casilla Ajustar tamaño automáticamente también se anuncia cuando se para sobre ella. Y desde la versión 1.6.11, cada cuadro de texto tiene su nombre fijo arriba, para que TalkBack, Jieshuo y Tiresias lo anuncien siempre, esté vacío o con texto. Desde la versión 1.6.12, los botones Pegar y Borrar quedan alineados con el cuadro. Si ya
+está al día, dice que ya está al día. No acepte una versión
+vieja si se la ofrece. La última versión es la que tiene las
+correcciones.
+
+2. Cómo moverse por la aplicación
+
+La aplicación tiene 4 pestañas abajo, siempre visibles.
+1. Editor.
+2. Herramientas.
+3. Vista previa.
+4. Ajustes.
+
+Para cambiar de pestaña, toque la pestaña abajo. Si usa teclado,
+los atajos son los siguientes.
+Control + 1, Editor.
+Control + 2, Herramientas.
+Control + 3, Vista previa.
+Control + 4, Ajustes.
+Control + G, genera en el Editor y salta a Vista previa.
+Control + L, limpia el texto en el Editor, o limpia las
+herramientas en Herramientas.
+Control + Enter, genera, en el campo de texto y en el contenido
+de una capa.
+
+3. Editor, Modo Simple
+
+Sirve para generar una imagen con un solo texto. Es el modo
+para cuando la imagen lleva una sola frase o un solo texto, con
+un solo estilo.
+Para qué sirven la sombra, la caja y el borde:
+- La sombra es una copia del texto, corrida un poco, detrás del
+texto. Sirve para despegar el texto del fondo, por ejemplo texto
+blanco sobre una foto clara, que sin sombra se pierde.
+- La caja es un rectángulo de color detrás del texto. Sirve
+cuando el fondo es muy movido y ni la sombra ni el borde
+alcanzan: la caja tapa el fondo justo detrás del texto para que
+se lea bien.
+- El borde es un contorno alrededor de cada letra. Sirve cuando
+la foto tiene muchos colores o partes claras y oscuras mezcladas.
+Mientras más grueso el borde, más se recorta la letra del fondo.
+La casilla Ajustar tamaño automáticamente: si está prendida, la
+aplicación achica el texto sola hasta que entre en la imagen, y
+mientras está prendida no se puede cambiar el tamaño a mano. Si
+está apagada, el texto no se achica solo: si no entra, la
+aplicación avisa y hay que achicar el tamaño o acortar el texto.
+Paso 1. Vaya a la pestaña Editor.
+Paso 2. Asegúrese de estar en Modo Simple.
+Paso 3. Escriba el texto. El cuadro se llama Texto, y el nombre
+está fijo arriba, así el lector lo anuncia siempre, esté vacío o
+con texto. Al lado del cuadro tiene los botones Pegar y Borrar
+texto. Pegar pone lo que tenga copiado, Borrar lo vacía, y los
+dos avisan con voz.
+Paso 4. Elija la fuente, el tamaño, el color del texto y la
+alineación.
+Para conseguir más fuentes: en el estilo del texto tiene tres
+botones, Recargar, Importar y Buscar. Buscar abre un cuadro
+para buscar una fuente en Google Fonts: escriba el nombre, toque
+Buscar y si la encuentra toque Descargar y aplicar. Importar
+deja elegir un archivo de fuente, .ttf u .otf, que tenga en el
+teléfono. Recargar vuelve a leer la lista de fuentes.
+Paso 5. Elija el fondo, de color sólido, con degradado o con
+imagen.
+Paso 6. Opacidad del fondo. Si la pone en 0, el fondo queda
+transparente y al guardar se usa PNG. Si está en 100, el fondo
+se ve normal.
+Paso 7. Si quiere sombra, actívela y elija su color, su posición
+y su opacidad.
+Paso 8. Genere la imagen con el botón Generar o con Control + G.
+La aplicación salta a Vista previa.
+Paso 9. En Vista previa puede Compartir, Copiar y Guardar la
+imagen.
+
+Si la casilla Ajustar tamaño automáticamente está prendida y el
+texto es muy largo para la imagen, la aplicación lo achica sola.
+Si aun así no entra, avisa. Si la casilla está apagada, no lo
+achica: avisa que el texto no entra y hay que achicar el tamaño
+o acortar el texto.
+
+4. Editor, Modo Capas
+
+Es igual que el Modo Simple, pero con varias capas. Es el modo
+para cuando la imagen lleva varios textos distintos: por ejemplo
+un título grande arriba, una frase en el medio y una firma abajo,
+cada uno con su tamaño, su color y su lugar, y pudiendo poner uno
+adelante de otro.
+Cada capa puede ser de texto o de imagen, y cada una tiene sus
+propias propiedades.
+Paso 1. Vaya a la pestaña Editor y pase a Modo Capas.
+Paso 2. Agregue capas. Cada capa tiene un nombre.
+Paso 3. Toque una capa de la lista para cambiar sus propiedades,
+texto, posición X e Y en porcentaje, escala, tamaño, colores,
+sombra y caja. El cuadro del texto se llama Contenido y también
+tiene su nombre fijo arriba. Al lado tiene los botones Pegar y
+Borrar texto, iguales que en el Modo Simple.
+Paso 4. Las capas se pueden eliminar y renombrar. También se
+pueden subir y bajar en la lista con los botones Subir y Bajar.
+Al mover una capa, la voz dice su nombre y su posición. Por
+ejemplo, hola, posición 1 de 2.
+Paso 5. Genere la imagen con el botón Generar. Se genera con
+todas las capas juntas.
+Paso 6. En el editor de Capas también tiene los botones
+Compartir, Copiar y Guardar.
+
+Orden de las capas, muy importante.
+La primera de la lista queda adelante, y la última queda atrás.
+Si dos capas se tapan, la que está primera en la lista es la que
+se ve. Para traer una capa para adelante, use Subir. Para
+mandarla para atrás, use Bajar. La lista misma lo dice, la
+primera de la lista queda adelante.
+
+Tenga en cuenta que al mover una capa, el orden cambia en la
+lista al momento, pero la imagen final solo cambia cuando vuelve
+a tocar Generar.
+
+5. Herramientas
+
+La pestaña Herramientas tiene tres secciones, Cortador,
+Normalizar y Collage. Cada una tiene Generar y Limpiar, y el
+resultado aparece ahí mismo, con Compartir, Copiar y Guardar.
+
+Cortador.
+Paso 1. Elija la foto.
+Paso 2. Mueva los controles de recorte, izquierda, derecha,
+arriba y abajo, de 0 a 80 por ciento.
+Paso 3. Toque Recortar. El resultado se guarda en la carpeta
+Recortadas.
+
+Normalizar.
+Paso 1. Elija la foto.
+Paso 2. Elija el modo, Cuadrado 1080, Cuadrado 800 o Proporción
+1080.
+Paso 3. Toque Generar. El resultado se guarda en la carpeta
+Normalizadas.
+
+Collage.
+Paso 1. Elija hasta 4 fotos. La aplicación avisa si intenta
+agregar más de 4.
+Paso 2. Elija el tipo, Cuadrícula, Horizontal o Vertical.
+Paso 3. Toque Generar. El resultado se guarda en la carpeta
+Collages.
+
+6. Vista previa
+
+Muestra la última imagen generada, en el modo en que la generó.
+Si generó en Modo Simple, se ve esa. Si generó en Modo Capas,
+se ve esa. Nunca muestra la imagen del otro modo. Abajo tiene
+los botones Compartir, Copiar y Guardar.
+Zoom. Hay un control de zoom de 50 por ciento a 300 por ciento.
+El zoom cambia el tamaño real de la imagen y puede desplazarla
+para ver los bordes. El texto del zoom dice el porcentaje. Por
+ejemplo, Zoom 150 por ciento.
+
+7. Guardar, con opciones
+
+Al tocar Guardar, se abre un cuadro con opciones.
+Formato, Automático, PNG o JPG. Automático guarda PNG si el
+fondo es transparente y JPG si no.
+Calidad JPG, de 70 a 100, por defecto 95. Solo aparece si el
+formato no es PNG.
+Carpeta, Texto, Recortadas, Normalizadas o Collages. Por defecto
+es la carpeta de la sección donde está.
+Toque Guardar para confirmar, o cancele si no quiere guardar.
+La imagen se guarda en la galería, en Imágenes, Taller
+Accesible, y la carpeta elegida. La aplicación avisa cuando ya
+se guardó.
+
+8. Ajustes
+
+La pestaña Ajustes tiene cuatro cosas.
+Tema de la aplicación, Usar tema oscuro, con un interruptor.
+Actualizaciones, el botón Buscar actualizaciones. Como se explica
+en el punto 1, siempre pregunta antes de descargar.
+Acerca de y ayuda, muestra la versión instalada y el botón Ver
+manual, que abre este manual dentro de la aplicación.
+Plantillas, un campo Nombre de la plantilla y el botón Guardar
+plantilla. Para cargar una plantilla guardada, toque el botón
+Seleccionar plantilla y elija su nombre. Para borrarla, toque el
+botón de borrar al lado.
+
+Plantillas.
+Una plantilla guarda el Modo Simple, el Modo Capas con todas
+sus capas, y el modo en el que estaba. Si guarda otra plantilla
+con el mismo nombre, no se duplica, se actualiza la que ya
+existe. Al cargar una plantilla, vuelve todo como estaba,
+incluidas las capas.
+
+9. Si es una persona ciega total, puede usar inteligencia
+artificial para diseñar la imagen
+
+Una persona ciega total puede usar un asistente de inteligencia
+artificial, por ejemplo desde el teléfono, para que le ayude a
+diseñar la imagen antes de generarla. La inteligencia artificial
+no ve la pantalla, pero sí puede asesorar.
+
+El orden que funciona es este.
+Primero, muéstrele a la inteligencia artificial la frase o el
+texto que quiere poner en la imagen.
+Después, muéstrele una captura de pantalla del programa y de los
+controles que tiene, para que se base en eso al asesorar.
+Con esa información, pregúntele, por ejemplo:
+Qué colores combinan bien para el texto y el fondo.
+Qué tamaño de texto conviene para una frase corta.
+Dónde conviene ubicar el texto, arriba, en el centro o abajo.
+Qué fondo queda mejor para el texto que quiere poner.
+
+También puede pedirle que le describa una imagen que ya generó,
+para saber cómo quedó. Para eso, comparta la imagen con el
+asistente y pregúntele qué se ve, dónde está el texto y si se lee
+bien.
+
+La idea es simple. Primero se diseña con ayuda de la
+inteligencia artificial, y después se genera la imagen en Taller
+Accesible con esas decisiones ya tomadas.
+
+10. Si algo no sale como espera
+
+Si la imagen no se ve como esperaba, revise en qué modo generó.
+Vista previa muestra solo la imagen del modo actual.
+Si una capa tapa a otra, revise el orden. La primera de la lista
+queda adelante. Use Subir y Bajar, y vuelva a generar.
+Si al guardar no elige nada, se guarda en Automático y en la
+carpeta de la sección. Eso está bien para la mayoría de los
+casos.
+Si la aplicación le ofrece actualizar a una versión con número
+menor que la que tiene, no la acepte. Es una versión vieja.
+Si TalkBack no anuncia un control, salga de la pestaña y vuelva
+a entrar. Si sigue sin anunciar, anótelo para corregirlo.
+
+Fin del manual.
+Si algo no se entiende o no funciona como dice aquí, coméntelo
+con la persona que le compartió este manual.

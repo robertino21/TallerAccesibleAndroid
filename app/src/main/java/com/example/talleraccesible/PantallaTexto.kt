@@ -610,7 +610,7 @@ fun DialogoGuardar(vm: AppViewModel) {
 }
 
 @Composable
-fun PantallaAjustes(vm: AppViewModel) {
+fun PantallaAjustes(vm: AppViewModel, onVerManual: () -> Unit) {
     var nombrePlantilla by remember { mutableStateOf("") }
     var expandido by remember { mutableStateOf(false) }
     var plantillaSeleccionada by remember { mutableStateOf("Seleccionar plantilla...") }
@@ -660,19 +660,19 @@ fun PantallaAjustes(vm: AppViewModel) {
              }
          }
 
-         // Aviso de actualización: solo se descarga si el usuario lo confirma.
-         vm.actualizacionPendiente?.let { actualizacion ->
-             AlertDialog(
-                 onDismissRequest = { vm.descartarActualizacion() },
-                 title = { Text("Actualización disponible") },
-                 text = { Text("Hay una nueva versión: ${actualizacion.version}. La instalada es ${vm.versionInstalada()}. ¿Descargar e instalar?") },
-                 confirmButton = {
-                     TextButton(onClick = { vm.descargarActualizacion() }) { Text("Descargar") }
-                 },
-                 dismissButton = {
-                     TextButton(onClick = { vm.descartarActualizacion() }) { Text("Ahora no") }
+         Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
+             Column(Modifier.padding(16.dp)) {
+                 Text("Acerca de y ayuda", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                 Spacer(Modifier.height(8.dp))
+                 Text("Taller Accesible, versión ${vm.versionInstalada()}")
+                 Spacer(Modifier.height(8.dp))
+                 Button(
+                     onClick = onVerManual,
+                     modifier = Modifier.fillMaxWidth()
+                 ) {
+                     Text("Ver manual")
                  }
-             )
+             }
          }
 
          Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
