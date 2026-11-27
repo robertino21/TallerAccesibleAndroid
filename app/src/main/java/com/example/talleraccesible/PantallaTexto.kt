@@ -327,7 +327,7 @@ private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
                  CampoSlider("Ancho (px)", l.ancho, 100..4000, { l.ancho = it }, paso = 10)
                  CampoSlider("Alto (px)", l.alto, 100..4000, { l.alto = it }, paso = 10)
              }
-             CampoLista("Tipo de fondo", FONDOS, l.fondoTipo, { l.fondoTipo = it })
+             CampoFondo(l.fondoTipo, l.color1, l.color2, l.fondoUri, { l.fondoTipo = it })
              
              CampoSlider("Opacidad del fondo", l.opacidadFondo, 0..100, { l.opacidadFondo = it })
 

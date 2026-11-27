@@ -1,13 +1,17 @@
 package com.example.talleraccesible
 
+import android.net.Uri
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -15,19 +19,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -44,6 +48,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
@@ -53,12 +60,14 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -153,8 +162,12 @@ fun CampoCheck(label: String, marcado: Boolean, onChange: (Boolean) -> Unit, ena
     }
 }
 
-// Muestras de color: se ve el color en vez de leer su nombre en una lista.
-// La opción "Sin seleccionar" es un botón con texto, porque no tiene color.
+// ------------------------------------------------------------
+// Selector de color por pasos: flecha anterior, muestra del
+// color actual y flecha siguiente. Dos paradas para el lector
+// de pantalla, y el nombre del color siempre en la etiqueta.
+// Al cambiar, se anuncia el color nuevo.
+// ------------------------------------------------------------
 @Composable
 fun CampoColor(
     label: String,
@@ -162,50 +175,124 @@ fun CampoColor(
     seleccion: String,
     onSelect: (String) -> Unit,
 ) {
+    val vista = LocalView.current
+    val indice = opciones.indexOf(seleccion).coerceAtLeast(0)
+    fun cambiar(paso: Int) {
+        val nuevo = opciones[(indice + paso + opciones.size) % opciones.size]
+        onSelect(nuevo)
+        vista.announceForAccessibility("$label: $nuevo")
+    }
+    val entero = colorDe(seleccion)
+    val fondo = if (entero != null) Color(entero) else Color.Transparent
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("$label: $seleccion", style = MaterialTheme.typography.labelMedium)
         Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            opciones.forEach { nombre ->
-                if (nombre == SIN) {
-                    OutlinedButton(
-                        onClick = { onSelect(nombre) },
-                        contentPadding = PaddingValues(0.dp),
-                        modifier = Modifier.size(48.dp),
-                    ) { Text("Sin", fontSize = 12.sp) }
-                } else {
-                    val entero = colorDe(nombre)
-                    val fondo = if (entero != null) Color(entero) else Color.Transparent
-                    Button(
-                        onClick = { onSelect(nombre) },
-                        colors = ButtonDefaults.buttonColors(containerColor = fondo),
-                        contentPadding = PaddingValues(0.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.size(48.dp)
-                            .border(
-                                width = if (seleccion == nombre) 3.dp else 1.dp,
-                                color = if (seleccion == nombre) MaterialTheme.colorScheme.primary else Color.Gray,
-                                shape = RoundedCornerShape(12.dp),
-                            )
-                            .semantics {
-                                contentDescription = nombre
-                                selected = seleccion == nombre
-                            },
-                    ) {
-                        if (seleccion == nombre) {
-                            // Luminancia relativa (fórmula WCAG) para elegir
-                            // el color de la tilde según el fondo.
-                            val lum = 0.2126f * fondo.red + 0.7152f * fondo.green + 0.0722f * fondo.blue
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = null,
-                                tint = if (fondo.alpha < 0.5f || lum > 0.5f) Color.Black else Color.White,
-                            )
-                        }
+            IconButton(
+                onClick = { cambiar(-1) },
+                modifier = Modifier.size(48.dp)
+                    .semantics { contentDescription = "$label, color anterior, $seleccion" },
+            ) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = null)
+            }
+            // Muestra del color actual. Solo visual, no es una parada.
+            Box(
+                Modifier.size(48.dp)
+                    .background(fondo, RoundedCornerShape(12.dp))
+                    .border(1.dp, Color.Gray, RoundedCornerShape(12.dp)),
+            ) {
+                if (seleccion == SIN) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        drawLine(
+                            Color.Gray,
+                            Offset(0f, 0f),
+                            Offset(size.width, size.height),
+                            strokeWidth = 4f,
+                        )
                     }
                 }
+            }
+            IconButton(
+                onClick = { cambiar(1) },
+                modifier = Modifier.size(48.dp)
+                    .semantics { contentDescription = "$label, siguiente color, $seleccion" },
+            ) {
+                Icon(Icons.Default.ChevronRight, contentDescription = null)
+            }
+        }
+    }
+}
+
+// ------------------------------------------------------------
+// Botón de fondo: una miniatura del fondo actual (rectángulo)
+// que al tocarlo pasa al siguiente tipo de fondo y lo anuncia.
+// Una sola parada para el lector de pantalla.
+// ------------------------------------------------------------
+@Composable
+fun CampoFondo(
+    fondoTipo: String,
+    color1: String,
+    color2: String,
+    fondoUri: Uri?,
+    onTipoChange: (String) -> Unit,
+) {
+    val vista = LocalView.current
+    val ctx = LocalContext.current
+    val indice = FONDOS.indexOf(fondoTipo).coerceAtLeast(0)
+    val miniatura = remember(fondoUri) {
+        if (fondoUri == null) null
+        else runCatching { Imagenes.cargar(ctx, fondoUri, 256).bitmap }.getOrNull()
+    }
+    val c1 = colorDe(color1)?.let { Color(it) } ?: Color.White
+    val c2 = colorDe(color2)?.let { Color(it) } ?: Color.White
+    val pincel = when (fondoTipo) {
+        "Degradado vertical" -> Brush.verticalGradient(listOf(c1, c2))
+        "Degradado horizontal" -> Brush.horizontalGradient(listOf(c1, c2))
+        else -> null
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Fondo: $fondoTipo", style = MaterialTheme.typography.labelMedium)
+        OutlinedButton(
+            onClick = {
+                val nuevo = FONDOS[(indice + 1) % FONDOS.size]
+                onTipoChange(nuevo)
+                vista.announceForAccessibility("Fondo: $nuevo")
+            },
+            contentPadding = PaddingValues(8.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                .semantics { contentDescription = "Fondo: $fondoTipo. Toca para cambiar el tipo de fondo" },
+        ) {
+            Row(
+                Modifier.clearAndSetSemantics {},
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Miniatura del fondo actual.
+                Box(
+                    Modifier.size(width = 96.dp, height = 40.dp)
+                        .border(1.dp, Color.Gray, RoundedCornerShape(8.dp)),
+                ) {
+                    when {
+                        fondoTipo == "Imagen" && miniatura != null -> Image(
+                            bitmap = miniatura.asImageBitmap(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp)),
+                        )
+                        pincel != null -> Box(
+                            Modifier.fillMaxSize()
+                                .background(pincel, RoundedCornerShape(8.dp)),
+                        )
+                        else -> Box(
+                            Modifier.fillMaxSize()
+                                .background(c1, RoundedCornerShape(8.dp)),
+                        )
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(fondoTipo, style = MaterialTheme.typography.bodyLarge)
             }
         }
     }
