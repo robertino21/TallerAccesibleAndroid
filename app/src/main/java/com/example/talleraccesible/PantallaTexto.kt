@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
@@ -55,8 +56,9 @@ fun PantallaTexto(vm: AppViewModel) {
     // de cada cambio, así la imagen que se ve arriba siempre es la actual.
     // Sin botón para prenderla o apagarla: simplemente funciona.
     LaunchedEffect(t.modo, s.texto, s.estilo, s.pos, s.yPct, s.auto, s.lienzo.snap(), c.capas.toList(), c.lienzo.snap()) {
-        delay(400)
-        vm.texto.generar(vm.entorno, silencioso = true)
+        delay(250)
+        // Solo la vista previa: sin archivo temporal, así aparece antes.
+        vm.texto.generar(vm.entorno, silencioso = true, soloVista = true)
     }
     Column(
         Modifier.fillMaxSize().imePadding().padding(16.dp),
@@ -152,6 +154,9 @@ fun PantallaTexto(vm: AppViewModel) {
 private fun VistaPreviaEnVivo(vm: AppViewModel) {
     val resultado = vm.texto.resultadoActual()
     val t = vm.texto
+    // La tarjeta se centra en la pantalla: cuando el lienzo es vertical
+    // (Reel), la tarjeta es angosta y queda en el medio, sin rayas.
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
     Card(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(4.dp),
@@ -163,10 +168,15 @@ private fun VistaPreviaEnVivo(vm: AppViewModel) {
         },
     ) {
         if (resultado != null) {
+            // La caja toma la forma del lienzo (ancho por alto de la imagen),
+            // con un máximo de alto, así no quedan rayas negras a los costados.
+            val bmp = resultado.vista
             ImagenConZoom(
-                bitmap = resultado.vista,
+                bitmap = bmp,
                 descripcion = resultado.descripcion,
-                modifier = Modifier.fillMaxWidth().height(300.dp),
+                modifier = Modifier.fillMaxWidth()
+                    .aspectRatio(bmp.width.toFloat() / bmp.height.toFloat())
+                    .heightIn(max = 400.dp),
                 onArrastrar = { dxPct, dyPct ->
                     if (t.modo == "Simple") {
                         val s = t.simple
@@ -189,6 +199,7 @@ private fun VistaPreviaEnVivo(vm: AppViewModel) {
                 Text("La vista previa aparece aquí sola mientras trabajas.")
             }
         }
+    }
     }
 }
 
@@ -336,21 +347,33 @@ private fun FilaBotonesSimple(vm: AppViewModel) {
     val env = vm.entorno
     val s = vm.texto.simple
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
          Button(
-             onClick = { 
-                 if (s.resultado?.uri != null) Almacen.compartir(context, s.resultado!!.uri!!)
-                 else env.decir("Primero genera una imagen")
+             onClick = {
+                 scope.launch {
+                     env.decir("Generando la imagen")
+                     val r = vm.texto.generarCompleto(env)
+                     if (r?.uri != null) Almacen.compartir(context, r.uri)
+                     else env.decir("Primero genera una imagen")
+                 }
              },
              enabled = s.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Compartir", fontSize = 14.sp) }
 
          Button(
-             onClick = { vm.pedirGuardar(s.resultado, "Texto") },
+             onClick = {
+                 scope.launch {
+                     env.decir("Generando la imagen")
+                     val r = vm.texto.generarCompleto(env)
+                     if (r != null) vm.pedirGuardar(r, "Texto")
+                     else env.decir("Primero genera una imagen")
+                 }
+             },
              enabled = s.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Guardar", fontSize = 14.sp) }
@@ -691,15 +714,19 @@ private fun FilaBotonesCapas(vm: AppViewModel) {
     val env = vm.entorno
     val c = vm.texto.capas
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
          Button(
-             onClick = { 
-                 val r = c.resultado
-                 if (r != null && r.uri != null) Almacen.compartir(ctx, r.uri)
-                 else env.decir("Primero genera una imagen")
+             onClick = {
+                 scope.launch {
+                     env.decir("Generando la imagen")
+                     val r = vm.texto.generarCompleto(env)
+                     if (r?.uri != null) Almacen.compartir(ctx, r.uri)
+                     else env.decir("Primero genera una imagen")
+                 }
              },
              enabled = c.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
@@ -708,17 +735,27 @@ private fun FilaBotonesCapas(vm: AppViewModel) {
 
          Button(
              onClick = {
-                 val r = c.resultado
-                 val u = r?.uri
-                 if (u != null && Almacen.copiar(ctx, u)) env.decir("Imagen copiada")
-                 else env.decir("No se pudo copiar la imagen")
+                 scope.launch {
+                     env.decir("Generando la imagen")
+                     val r = vm.texto.generarCompleto(env)
+                     val u = r?.uri
+                     if (u != null && Almacen.copiar(ctx, u)) env.decir("Imagen copiada")
+                     else env.decir("No se pudo copiar la imagen")
+                 }
              },
              enabled = c.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Copiar", fontSize = 14.sp) }
 
          Button(
-             onClick = { vm.pedirGuardar(c.resultado, "Texto") },
+             onClick = {
+                 scope.launch {
+                     env.decir("Generando la imagen")
+                     val r = vm.texto.generarCompleto(env)
+                     if (r != null) vm.pedirGuardar(r, "Texto")
+                     else env.decir("Primero genera una imagen")
+                 }
+             },
              enabled = c.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Guardar", fontSize = 14.sp) }

@@ -19,6 +19,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -94,23 +95,63 @@ class SimpleState {
     var resultado by mutableStateOf<Resultado?>(null)
     var ocupado by mutableStateOf(false)
 
-    fun generar(env: Entorno, silencioso: Boolean = false) {
+    fun generar(env: Entorno, silencioso: Boolean = false, soloVista: Boolean = false) {
         val t = texto.trim()
         if (t.isEmpty()) { if (!silencioso) env.decir("Escribe texto"); return }
         if (ocupado) return
         val l = lienzo.snap(); val e = estilo; val p = pos; val y = yPct; val a = auto
         env.ejecutar({ ocupado = it }, "Error al generar la imagen") {
             val r = withContext(Dispatchers.Default) {
-                val s = Render.simple(env.app, t, l, e, p, y, a)
-                // Guardamos en caché, NO en la galería
-                val uri = Almacen.guardarTemporal(env.app, s.bitmap, s.png)
-                Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa generada", s.avisos, s.png)
+                val s = Render.simple(env.app, t, l, e, p, y, a, maxLadoFondo = if (soloVista) 1024 else 4096)
+                if (soloVista) {
+                    // Solo la vista previa: no se guarda el archivo temporal,
+                    // así la imagen aparece antes. El archivo se genera al
+                    // compartir, copiar o guardar, con la imagen actual.
+                    Resultado(Imagenes.vista(s.bitmap), resultado?.uri, "Vista previa generada", s.avisos, s.png)
+                } else {
+                    // Guardamos en caché, NO en la galería
+                    val uri = Almacen.guardarTemporal(env.app, s.bitmap, s.png)
+                    Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa generada", s.avisos, s.png)
+                }
             }
             resultado = r
             if (!silencioso) {
                 val extra = if (r.avisos.isEmpty()) "" else ". " + r.avisos.joinToString(". ")
                 env.decir("Vista previa lista. Puedes compartirla o guardarla.$extra")
             }
+        }
+    }
+
+    // Genera la imagen completa (a tamaño real, con archivo temporal) y
+    // espera a que esté lista. La usan Compartir, Copiar y Guardar.
+    suspend fun generarCompleto(env: Entorno): Resultado? {
+        var esperas = 0
+        while (ocupado && esperas < 100) { delay(50); esperas++ }
+        if (ocupado) return null
+        val t = texto.trim()
+        if (t.isEmpty()) return null
+        ocupado = true
+        return try {
+            val l = lienzo.snap(); val e = estilo; val p = pos; val y = yPct; val a = auto
+            val s = withContext(Dispatchers.Default) {
+                val rend = Render.simple(env.app, t, l, e, p, y, a)
+                val uri = Almacen.guardarTemporal(env.app, rend.bitmap, rend.png)
+                Resultado(Imagenes.vista(rend.bitmap), uri, "Vista previa generada", rend.avisos, rend.png)
+            }
+            resultado = s
+            s
+        } catch (ex: ErrorUsuario) {
+            env.decir(ex.message ?: "Error al generar la imagen")
+            null
+        } catch (ex: OutOfMemoryError) {
+            env.decir("La imagen es demasiado grande para la memoria del teléfono")
+            null
+        } catch (ex: Exception) {
+            Log.e("TallerAccesible", "Error al generar la imagen", ex)
+            env.decir("Error al generar la imagen")
+            null
+        } finally {
+            ocupado = false
         }
     }
 
@@ -186,22 +227,58 @@ class CapasState {
         if (seleccion in capas.indices) capas[seleccion] = nueva
     }
 
-    fun generar(env: Entorno, silencioso: Boolean = false) {
+    fun generar(env: Entorno, silencioso: Boolean = false, soloVista: Boolean = false) {
         if (capas.isEmpty()) { if (!silencioso) env.decir("Sin capas"); return }
         if (ocupado) return
         val l = lienzo.snap(); val lista = capas.toList()
         env.ejecutar({ ocupado = it }, "Error al generar las capas") {
             val r = withContext(Dispatchers.Default) {
-                val s = Render.capas(env.app, l, lista)
-                // Guardamos en caché, NO en la galería
-                val uri = Almacen.guardarTemporal(env.app, s.bitmap, s.png)
-                Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa de capas", s.avisos, s.png)
+                val s = Render.capas(env.app, l, lista, maxLadoFondo = if (soloVista) 1024 else 4096)
+                if (soloVista) {
+                    // Solo la vista previa: sin archivo temporal, así aparece antes.
+                    Resultado(Imagenes.vista(s.bitmap), resultado?.uri, "Vista previa de capas", s.avisos, s.png)
+                } else {
+                    // Guardamos en caché, NO en la galería
+                    val uri = Almacen.guardarTemporal(env.app, s.bitmap, s.png)
+                    Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa de capas", s.avisos, s.png)
+                }
             }
             resultado = r
             if (!silencioso) {
                 val extra = if (r.avisos.isEmpty()) "" else ". " + r.avisos.joinToString(". ")
                 env.decir("Vista previa de capas lista.$extra")
             }
+        }
+    }
+
+    // Genera la imagen completa actual y espera a que esté lista (ver SimpleState).
+    suspend fun generarCompleto(env: Entorno): Resultado? {
+        var esperas = 0
+        while (ocupado && esperas < 100) { delay(50); esperas++ }
+        if (ocupado) return null
+        if (capas.isEmpty()) return null
+        ocupado = true
+        return try {
+            val l = lienzo.snap(); val lista = capas.toList()
+            val s = withContext(Dispatchers.Default) {
+                val rend = Render.capas(env.app, l, lista)
+                val uri = Almacen.guardarTemporal(env.app, rend.bitmap, rend.png)
+                Resultado(Imagenes.vista(rend.bitmap), uri, "Vista previa de capas", rend.avisos, rend.png)
+            }
+            resultado = s
+            s
+        } catch (ex: ErrorUsuario) {
+            env.decir(ex.message ?: "Error al generar las capas")
+            null
+        } catch (ex: OutOfMemoryError) {
+            env.decir("La imagen es demasiado grande para la memoria del teléfono")
+            null
+        } catch (ex: Exception) {
+            Log.e("TallerAccesible", "Error al generar las capas", ex)
+            env.decir("Error al generar las capas")
+            null
+        } finally {
+            ocupado = false
         }
     }
 
@@ -219,7 +296,12 @@ class TextoState {
     // El resultado del modo actual, no el último que se generó en cualquier modo.
     fun resultadoActual(): Resultado? = if (modo == "Simple") simple.resultado else capas.resultado
 
-    fun generar(env: Entorno, silencioso: Boolean = false) = if (modo == "Simple") simple.generar(env, silencioso) else capas.generar(env, silencioso)
+    fun generar(env: Entorno, silencioso: Boolean = false, soloVista: Boolean = false) = if (modo == "Simple") simple.generar(env, silencioso, soloVista) else capas.generar(env, silencioso, soloVista)
+
+    // Genera la imagen completa actual y espera a que esté lista. La usan
+    // Compartir, Copiar y Guardar, porque la vista previa ya no guarda el
+    // archivo temporal: sin esto podrían compartir la imagen anterior.
+    suspend fun generarCompleto(env: Entorno): Resultado? = if (modo == "Simple") simple.generarCompleto(env) else capas.generarCompleto(env)
     fun limpiar(env: Entorno) = if (modo == "Simple") simple.limpiar(env) else capas.limpiar(env)
 }
 

@@ -33,7 +33,8 @@ object Render {
             tf = Fuentes.typeface(e.fuente),
             tam = (if (e.tam <= 0) 40 else e.tam).toFloat(),
             inter = e.inter.toFloat(),
-            texto = colorDe(e.colorTexto) ?: Color.WHITE,
+            // Sin color elegido (capa nueva): negro, que se lee sobre el fondo blanco por defecto.
+            texto = colorDe(e.colorTexto) ?: Color.BLACK,
             borde = colBorde,
             grosor = if (colBorde != null) e.grosor.toFloat() else 0f,
             sombra = if (e.sombra) colorDe(e.colorSombra) else null,
@@ -136,7 +137,7 @@ object Render {
         return Color.argb(a, Color.red(color), Color.green(color), Color.blue(color))
     }
 
-    private fun fondo(ctx: Context, l: LienzoSpec): Fondo {
+    private fun fondo(ctx: Context, l: LienzoSpec, maxLadoFondo: Int = 4096): Fondo {
         val bmp = Bitmap.createBitmap(l.ancho, l.alto, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val c1 = colorDe(l.color1)
@@ -146,7 +147,7 @@ object Render {
         when {
             l.tipo == "Imagen" -> {
                 val uri = l.fondo ?: throw ErrorUsuario("Elige primero la imagen de fondo")
-                val img = Imagenes.cargar(ctx, uri).bitmap
+                val img = Imagenes.cargar(ctx, uri, maxLadoFondo).bitmap
                 val p = Paint(Paint.FILTER_BITMAP_FLAG).apply { alpha = (255 * op).toInt() }
                 c.drawBitmap(img, null, RectF(0f, 0f, l.ancho.toFloat(), l.alto.toFloat()), p)
                 transparente = op < 1f
@@ -180,9 +181,10 @@ object Render {
     fun simple(
         ctx: Context, texto: String, l: LienzoSpec, estilo: EstiloUi,
         pos: String, yPct: Int, auto: Boolean,
+        maxLadoFondo: Int = 4096,
     ): Salida {
         if (estilo.caja && colorDe(estilo.colorCaja) == null) throw ErrorUsuario("Elige el color de la caja")
-        val f = fondo(ctx, l)
+        val f = fondo(ctx, l, maxLadoFondo)
         val c = Canvas(f.bitmap)
         val e = resolver(estilo)
         val w = l.ancho.toFloat()
@@ -218,8 +220,8 @@ object Render {
     // ============================================================
     // MODO CAPAS
     // ============================================================
-    fun capas(ctx: Context, l: LienzoSpec, capas: List<Capa>): Salida {
-        val f = fondo(ctx, l)
+    fun capas(ctx: Context, l: LienzoSpec, capas: List<Capa>, maxLadoFondo: Int = 4096): Salida {
+        val f = fondo(ctx, l, maxLadoFondo)
         val c = Canvas(f.bitmap)
         val w = l.ancho.toFloat()
         val h = l.alto.toFloat()

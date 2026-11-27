@@ -56,7 +56,7 @@ data class EstiloUi(
     val fuente: String = FUENTE_DEF,
     val tam: Int = 80,
     val inter: Int = 10,
-    val colorTexto: String = "Blanco",
+    val colorTexto: String = "Negro",
     val borde: Boolean = false,
     val colorBorde: String = SIN,
     val grosor: Int = 2,
