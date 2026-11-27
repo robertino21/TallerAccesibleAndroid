@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -532,7 +533,6 @@ fun CampoSlider(
     }
 }
 
-@Composable
 // La vista previa es la imagen en pantalla completa, sin título ni
 // botones: Compartir, Copiar y Guardar ya están en el Editor. Se puede
 // acercar pellizcando la imagen y moverla con el dedo; un doble toque
