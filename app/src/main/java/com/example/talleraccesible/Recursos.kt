@@ -58,11 +58,6 @@ object Fuentes {
                 val n = f.nameWithoutExtension
                 if (n !in m) m[n] = { Typeface.createFromFile(f) }
             }
-        File("/system/fonts").listFiles()?.filter { it.isFile && esFuente(it.name) }
-            ?.sortedBy { it.name }?.forEach { f ->
-                val n = f.nameWithoutExtension
-                if (n !in m) m[n] = { Typeface.createFromFile(f) }
-            }
         origen = m
         cache.clear()
         return m.keys.toList()

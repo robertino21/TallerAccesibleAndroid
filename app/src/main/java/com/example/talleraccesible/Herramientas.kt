@@ -1,9 +1,14 @@
 package com.example.talleraccesible
 
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,11 +26,29 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun PantallaHerramientas(vm: AppViewModel) {
@@ -87,6 +110,16 @@ private fun SeccionCortador(vm: AppViewModel) {
                 Text(if (c.imagenUri == null) "Elegir imagen" else "Cambiar imagen")
             }
             if (c.imagenNombre.isNotEmpty()) Text("Imagen: ${c.imagenNombre}")
+            if (c.imagenUri != null) {
+                // La foto en chiquito para recortar con el dedo.
+                val bitmap by produceState<Bitmap?>(initialValue = null, c.imagenUri) {
+                    value = withContext(Dispatchers.IO) {
+                        runCatching { Imagenes.cargar(ctx, c.imagenUri!!, 1024).bitmap }.getOrNull()
+                    }
+                }
+                bitmap?.let { RecorteTactil(it, c) }
+                Text("Arrastrá las esquinas del marco para elegir el recorte. Los deslizadores de abajo hacen lo mismo.")
+            }
             CampoSlider("Recorte izquierda (%)", c.recIzq, 0..80, { c.recIzq = it })
             CampoSlider("Recorte derecha (%)", c.recDer, 0..80, { c.recDer = it })
             CampoSlider("Recorte arriba (%)", c.recArr, 0..80, { c.recArr = it })
@@ -103,6 +136,131 @@ private fun SeccionCortador(vm: AppViewModel) {
                 ) { Text("Limpiar") }
             }
             c.resultado?.let { AccionesResultado(it, vm, "Recortadas") }
+        }
+    }
+}
+
+// Recorte táctil: el marco se arrastra con el dedo sobre la foto y mueve
+// los mismos porcentajes que los deslizadores de abajo, que quedan como
+// la forma de recortar con lector de pantalla.
+private enum class ManijaRecorte { SUP_IZQ, SUP_DER, INF_IZQ, INF_DER, IZQ, DER, SUP, INF, MOVER, NADA }
+
+private class InicioRecorte(val izq: Int, val der: Int, val arr: Int, val aba: Int)
+
+@Composable
+private fun RecorteTactil(bitmap: Bitmap, c: CortadorState) {
+    val densidad = LocalDensity.current
+    var manija by remember { mutableStateOf(ManijaRecorte.NADA) }
+    var inicio by remember { mutableStateOf<InicioRecorte?>(null) }
+    var acumulado by remember { mutableStateOf(Offset.Zero) }
+
+    BoxWithConstraints(
+        Modifier.fillMaxWidth().height(320.dp)
+            .semantics { contentDescription = "Recorte táctil. Arrastrá las esquinas del marco para elegir qué parte de la foto queda. También podés ajustar el recorte con los deslizadores de abajo." }
+    ) {
+        val anchoCaja = with(densidad) { maxWidth.toPx() }
+        val altoCaja = with(densidad) { maxHeight.toPx() }
+        val escala = minOf(anchoCaja / bitmap.width, altoCaja / bitmap.height)
+        val anchoImg = bitmap.width * escala
+        val altoImg = bitmap.height * escala
+        val offX = (anchoCaja - anchoImg) / 2f
+        val offY = (altoCaja - altoImg) / 2f
+
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Canvas(
+            Modifier.fillMaxSize()
+                .pointerInput(bitmap, anchoCaja, altoCaja, offX, offY, anchoImg, altoImg) {
+                    detectDragGestures(
+                        onDragStart = { pos ->
+                            val izqPx = offX + anchoImg * c.recIzq / 100f
+                            val derPx = offX + anchoImg * (100 - c.recDer) / 100f
+                            val arrPx = offY + altoImg * c.recArr / 100f
+                            val abaPx = offY + altoImg * (100 - c.recAba) / 100f
+                            val tolEsq = with(densidad) { 28.dp.toPx() }
+                            val tolBorde = with(densidad) { 20.dp.toPx() }
+                            inicio = InicioRecorte(c.recIzq, c.recDer, c.recArr, c.recAba)
+                            acumulado = Offset.Zero
+                            manija = when {
+                                pos.x < izqPx + tolEsq && pos.y < arrPx + tolEsq -> ManijaRecorte.SUP_IZQ
+                                pos.x > derPx - tolEsq && pos.y < arrPx + tolEsq -> ManijaRecorte.SUP_DER
+                                pos.x < izqPx + tolEsq && pos.y > abaPx - tolEsq -> ManijaRecorte.INF_IZQ
+                                pos.x > derPx - tolEsq && pos.y > abaPx - tolEsq -> ManijaRecorte.INF_DER
+                                pos.x < izqPx + tolBorde -> ManijaRecorte.IZQ
+                                pos.x > derPx - tolBorde -> ManijaRecorte.DER
+                                pos.y < arrPx + tolBorde -> ManijaRecorte.SUP
+                                pos.y > abaPx - tolBorde -> ManijaRecorte.INF
+                                pos.x in izqPx..derPx && pos.y in arrPx..abaPx -> ManijaRecorte.MOVER
+                                else -> ManijaRecorte.NADA
+                            }
+                        },
+                        onDragEnd = { manija = ManijaRecorte.NADA },
+                        onDragCancel = { manija = ManijaRecorte.NADA },
+                        onDrag = { _, cantidad ->
+                            val ini = inicio ?: return@detectDragGestures
+                            acumulado += cantidad
+                            val dxPct = acumulado.x / anchoImg * 100f
+                            val dyPct = acumulado.y / altoImg * 100f
+                            fun lim(v: Float, max: Int) = v.toInt().coerceIn(0, max)
+                            when (manija) {
+                                ManijaRecorte.SUP_IZQ -> {
+                                    c.recIzq = lim(ini.izq + dxPct, 90 - ini.der)
+                                    c.recArr = lim(ini.arr + dyPct, 90 - ini.aba)
+                                }
+                                ManijaRecorte.SUP_DER -> {
+                                    c.recDer = lim(ini.der - dxPct, 90 - ini.izq)
+                                    c.recArr = lim(ini.arr + dyPct, 90 - ini.aba)
+                                }
+                                ManijaRecorte.INF_IZQ -> {
+                                    c.recIzq = lim(ini.izq + dxPct, 90 - ini.der)
+                                    c.recAba = lim(ini.aba - dyPct, 90 - ini.arr)
+                                }
+                                ManijaRecorte.INF_DER -> {
+                                    c.recDer = lim(ini.der - dxPct, 90 - ini.izq)
+                                    c.recAba = lim(ini.aba - dyPct, 90 - ini.arr)
+                                }
+                                ManijaRecorte.IZQ -> c.recIzq = lim(ini.izq + dxPct, 90 - ini.der)
+                                ManijaRecorte.DER -> c.recDer = lim(ini.der - dxPct, 90 - ini.izq)
+                                ManijaRecorte.SUP -> c.recArr = lim(ini.arr + dyPct, 90 - ini.aba)
+                                ManijaRecorte.INF -> c.recAba = lim(ini.aba - dyPct, 90 - ini.arr)
+                                ManijaRecorte.MOVER -> {
+                                    val dx = dxPct.coerceIn(-ini.izq.toFloat(), ini.der.toFloat()).toInt()
+                                    val dy = dyPct.coerceIn(-ini.arr.toFloat(), ini.aba.toFloat()).toInt()
+                                    c.recIzq = ini.izq + dx
+                                    c.recDer = ini.der - dx
+                                    c.recArr = ini.arr + dy
+                                    c.recAba = ini.aba - dy
+                                }
+                                ManijaRecorte.NADA -> {}
+                            }
+                        },
+                    )
+                }
+        ) {
+            val izqPx = offX + anchoImg * c.recIzq / 100f
+            val derPx = offX + anchoImg * (100 - c.recDer) / 100f
+            val arrPx = offY + altoImg * c.recArr / 100f
+            val abaPx = offY + altoImg * (100 - c.recAba) / 100f
+            val marco = Rect(izqPx, arrPx, derPx, abaPx)
+            val sombra = Color.Black.copy(alpha = 0.5f)
+            drawRect(sombra, topLeft = Offset.Zero, size = Size(size.width, marco.top))
+            drawRect(sombra, topLeft = Offset(0f, marco.bottom), size = Size(size.width, size.height - marco.bottom))
+            drawRect(sombra, topLeft = Offset(0f, marco.top), size = Size(marco.left, marco.height))
+            drawRect(sombra, topLeft = Offset(marco.right, marco.top), size = Size(size.width - marco.right, marco.height))
+            drawRect(Color.White, topLeft = Offset(marco.left, marco.top), size = Size(marco.width, marco.height), style = Stroke(width = 3f))
+            val m = with(densidad) { 14.dp.toPx() }
+            listOf(
+                Offset(marco.left, marco.top),
+                Offset(marco.right, marco.top),
+                Offset(marco.left, marco.bottom),
+                Offset(marco.right, marco.bottom),
+            ).forEach { p ->
+                drawRect(Color.White, topLeft = Offset(p.x - m / 2, p.y - m / 2), size = Size(m, m))
+            }
         }
     }
 }
