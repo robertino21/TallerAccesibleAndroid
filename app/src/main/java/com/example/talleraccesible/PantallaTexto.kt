@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.geometry.Offset
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -78,16 +80,45 @@ fun PantallaTexto(vm: AppViewModel) {
 }
 
 // Vista previa en vivo del Editor: la imagen que se está armando, siempre
-// visible arriba de los controles, con zoom de pellizco.
+// visible arriba de los controles, con zoom de pellizco. Arrastrando la
+// imagen se mueve el texto (en Simple, solo hacia arriba o abajo) o la
+// capa seleccionada (en Capas); los deslizadores de posición hacen lo
+// mismo y quedan para el lector de pantalla.
 @Composable
 private fun VistaPreviaEnVivo(vm: AppViewModel) {
     val resultado = vm.texto.resultadoActual()
-    Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(4.dp)) {
+    val t = vm.texto
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(4.dp),
+        modifier = Modifier.semantics {
+            contentDescription = if (t.modo == "Simple")
+                "Vista previa en vivo. Arrastrá la imagen para mover el texto hacia arriba o abajo. También podés usar el deslizador de posición."
+            else
+                "Vista previa en vivo. Arrastrá la imagen para mover la capa seleccionada. También podés usar los deslizadores de posición."
+        },
+    ) {
         if (resultado != null) {
             ImagenConZoom(
                 bitmap = resultado.vista,
                 descripcion = resultado.descripcion,
                 modifier = Modifier.fillMaxWidth().height(300.dp),
+                onArrastrar = { dxPct, dyPct ->
+                    if (t.modo == "Simple") {
+                        val s = t.simple
+                        if (s.pos != "Personalizada %") s.pos = "Personalizada %"
+                        s.yPct = (s.yPct + dyPct).toInt().coerceIn(0, 100)
+                    } else {
+                        val c = t.capas
+                        val capa = c.capaActual ?: return@ImagenConZoom
+                        val nx = (capa.xPct + dxPct).toInt().coerceIn(-50, 150)
+                        val ny = (capa.yPct + dyPct).toInt().coerceIn(-50, 150)
+                        when (capa) {
+                            is CapaTexto -> c.actualizar(capa.copy(xPct = nx, yPct = ny))
+                            is CapaImagen -> c.actualizar(capa.copy(xPct = nx, yPct = ny))
+                        }
+                    }
+                },
             )
         } else {
             Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
@@ -99,44 +130,66 @@ private fun VistaPreviaEnVivo(vm: AppViewModel) {
 
 // Imagen con zoom de pellizco, compartida por la vista previa en vivo del
 // Editor y por la pestaña Vista previa. El zoom vuelve al tamaño normal
-// cuando llega una imagen nueva.
+// cuando llega una imagen nueva. Si se pasa onArrastrar, arrastrar con un
+// dedo mueve el texto o la capa mientras la imagen está sin zoom; con zoom,
+// arrastrar mueve la imagen.
 @Composable
 private fun ImagenConZoom(
     bitmap: Bitmap,
     descripcion: String,
     modifier: Modifier = Modifier,
+    onArrastrar: ((dxPct: Float, dyPct: Float) -> Unit)? = null,
 ) {
     var escala by remember(bitmap) { mutableStateOf(1f) }
     var desplazamiento by remember(bitmap) { mutableStateOf(Offset.Zero) }
-    Box(
-        modifier.background(Color.Black)
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val nuevaEscala = (escala * zoom).coerceIn(1f, 5f)
-                    escala = nuevaEscala
-                    desplazamiento = if (nuevaEscala <= 1f) Offset.Zero else desplazamiento + pan
-                }
-            }
-            .pointerInput(Unit) {
-                detectTapGestures(onDoubleTap = {
-                    escala = if (escala > 1f) 1f else 2f
-                    desplazamiento = Offset.Zero
-                })
-            },
+    val densidad = LocalDensity.current
+    BoxWithConstraints(
+        modifier.background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
-        Image(
-            bitmap = bitmap.asImageBitmap(),
-            contentDescription = descripcion,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize()
-                .graphicsLayer(
-                    scaleX = escala,
-                    scaleY = escala,
-                    translationX = desplazamiento.x,
-                    translationY = desplazamiento.y,
+        val anchoCaja = with(densidad) { maxWidth.toPx() }
+        val altoCaja = with(densidad) { maxHeight.toPx() }
+        val escalaAjuste = minOf(anchoCaja / bitmap.width, altoCaja / bitmap.height)
+        val anchoImg = bitmap.width * escalaAjuste
+        val altoImg = bitmap.height * escalaAjuste
+        Box(
+            Modifier.fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        val nuevaEscala = (escala * zoom).coerceIn(1f, 5f)
+                        escala = nuevaEscala
+                        desplazamiento = if (nuevaEscala <= 1f) Offset.Zero else desplazamiento + pan
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures(onDoubleTap = {
+                        escala = if (escala > 1f) 1f else 2f
+                        desplazamiento = Offset.Zero
+                    })
+                }
+                .then(
+                    if (onArrastrar != null) Modifier.pointerInput(bitmap) {
+                        detectDragGestures { _, cantidad ->
+                            if (escala > 1f) return@detectDragGestures
+                            onArrastrar(cantidad.x / anchoImg * 100f, cantidad.y / altoImg * 100f)
+                        }
+                    } else Modifier
                 ),
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = descripcion,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+                    .graphicsLayer(
+                        scaleX = escala,
+                        scaleY = escala,
+                        translationX = desplazamiento.x,
+                        translationY = desplazamiento.y,
+                    ),
+            )
+        }
     }
 }
 
