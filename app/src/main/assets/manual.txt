@@ -1,6 +1,6 @@
 MANUAL DE TALLER ACCESIBLE PARA ANDROID
 Para personas ciegas, con TalkBack
-Versión 1.6.18
+Versión 1.6.19
 27 de noviembre de 2026
 
 Este manual explica cómo usar Taller Accesible en Android, un
@@ -11,14 +11,14 @@ TalkBack.
 1. Qué es y qué necesita
 
 Taller Accesible para Android es un programa para el teléfono.
-Se usa con TalkBack. La versión actual es la 1.6.18. Se instala
+Se usa con TalkBack. La versión actual es la 1.6.19. Se instala
 con el archivo APK, y después se actualiza desde la misma
 aplicación.
 
 Para actualizar, vaya a la pestaña Ajustes y toque Buscar
 actualizaciones. Si hay una versión nueva, la aplicación
 pregunta antes de descargar. Toque Descargar para instalarla o
-Ahora no para dejarlo para después. Nunca descarga sola. Además, la aplicación revisa sola si hay una versión nueva cada vez que se abre. Si la hay, avisa con el mismo cartel para descargar o dejarlo para después. Si no hay nada nuevo, no dice nada. Desde la versión 1.6.8, la aplicación también anuncia los mensajes, como el de actualización y el de imagen guardada, para que los lea Jieshuo, el lector de pantalla chino, además de TalkBack. Desde la versión 1.6.9, la casilla Ajustar tamaño automáticamente también se anuncia cuando se para sobre ella. Y desde la versión 1.6.11, cada cuadro de texto tiene su nombre fijo arriba, para que TalkBack, Jieshuo y Tiresias lo anuncien siempre, esté vacío o con texto. Desde la versión 1.6.12, los botones Pegar y Borrar quedan alineados con el cuadro. Desde la versión 1.6.13, el manual está dentro de la aplicación, en Ajustes, en Acerca de y ayuda, y la aplicación revisa sola si hay una versión nueva cada vez que se abre. Desde la versión 1.6.14, el aviso de actualización muestra qué trae la versión nueva, y la descarga se anuncia cuando empieza. Desde la versión 1.6.15, la Vista previa es a pantalla completa y se puede acercar pellizcando, el Cortador tiene marco para recortar con el dedo, la lista de fuentes está limpia y el Editor tiene vista previa en vivo: la imagen se actualiza sola, el texto se arrastra con el dedo y los colores se eligen tocando la muestra. Desde la versión 1.6.16, todos los mensajes de la aplicación están en español neutro. Desde la versión 1.6.17, los colores se eligen con dos flechas, una para el color anterior y otra para el siguiente, y el botón siempre dice qué color está puesto; y el fondo se elige con un solo botón que muestra el fondo actual. Desde la versión 1.6.18, las listas del Editor y de Herramientas son perezosas: solo se arman los controles que entran en pantalla, así en teléfonos lentos el flick no se traba y la lista se desplaza sola. Si ya
+Ahora no para dejarlo para después. Nunca descarga sola. Además, la aplicación revisa sola si hay una versión nueva cada vez que se abre. Si la hay, avisa con el mismo cartel para descargar o dejarlo para después. Si no hay nada nuevo, no dice nada. Desde la versión 1.6.8, la aplicación también anuncia los mensajes, como el de actualización y el de imagen guardada, para que los lea Jieshuo, el lector de pantalla chino, además de TalkBack. Desde la versión 1.6.9, la casilla Ajustar tamaño automáticamente también se anuncia cuando se para sobre ella. Y desde la versión 1.6.11, cada cuadro de texto tiene su nombre fijo arriba, para que TalkBack, Jieshuo y Tiresias lo anuncien siempre, esté vacío o con texto. Desde la versión 1.6.12, los botones Pegar y Borrar quedan alineados con el cuadro. Desde la versión 1.6.13, el manual está dentro de la aplicación, en Ajustes, en Acerca de y ayuda, y la aplicación revisa sola si hay una versión nueva cada vez que se abre. Desde la versión 1.6.14, el aviso de actualización muestra qué trae la versión nueva, y la descarga se anuncia cuando empieza. Desde la versión 1.6.15, la Vista previa es a pantalla completa y se puede acercar pellizcando, el Cortador tiene marco para recortar con el dedo, la lista de fuentes está limpia y el Editor tiene vista previa en vivo: la imagen se actualiza sola, el texto se arrastra con el dedo y los colores se eligen tocando la muestra. Desde la versión 1.6.16, todos los mensajes de la aplicación están en español neutro. Desde la versión 1.6.17, los colores se eligen con dos flechas, una para el color anterior y otra para el siguiente, y el botón siempre dice qué color está puesto; y el fondo se elige con un solo botón que muestra el fondo actual. Desde la versión 1.6.18, las listas del Editor y de Herramientas son perezosas: solo se arman los controles que entran en pantalla, así en teléfonos lentos el flick no se traba y la lista se desplaza sola. Desde la versión 1.6.19, el Editor está dividido en tarjetas, una por cada sección, para que el foco del lector no salte adentro de un bloque gigante; el botón Generar ya no está en el Editor, porque la imagen se genera sola y se ve en la vista previa en vivo; y el estilo del texto ahora está en tarjetas separadas: Texto, Borde, Sombra y Caja. Si ya
 está al día, dice que ya está al día. No acepte una versión
 vieja si se la ofrece. La última versión es la que tiene las
 correcciones.
@@ -66,7 +66,7 @@ está apagada, el texto no se achica solo: si no entra, la
 aplicación avisa y hay que achicar el tamaño o acortar el texto.
 Vista previa en vivo: arriba del Editor se ve la imagen que
 está armando, y se actualiza sola un ratito después de cada
-cambio, sin tocar Generar. Si la persona ve la pantalla, puede
+cambio, sin tocar ningún botón. Si la persona ve la pantalla, puede
 arrastrar la imagen con el dedo para mover el texto hacia arriba
 o abajo; el deslizador de posición vertical hace lo mismo.
 Paso 1. Vaya a la pestaña Editor.
@@ -97,9 +97,10 @@ transparente y al guardar se usa PNG. Si está en 100, el fondo
 se ve normal.
 Paso 7. Si quiere sombra, actívela y elija su color, su posición
 y su opacidad.
-Paso 8. Genere la imagen con el botón Generar: la imagen
-aparece arriba, en la vista previa en vivo. Con Control + G,
-además de generar, la aplicación salta a Vista previa.
+Paso 8. La imagen ya está generada: aparece arriba, en la
+vista previa en vivo, y se actualiza sola con cada cambio. Con
+Control + G, la aplicación genera la imagen y salta a Vista
+previa.
 Paso 9. Compartir, Copiar y Guardar están en el Editor, abajo
 de los controles. En Vista previa solo se mira la imagen.
 
@@ -132,9 +133,10 @@ Paso 4. Las capas se pueden eliminar y renombrar. También se
 pueden subir y bajar en la lista con los botones Subir y Bajar.
 Al mover una capa, la voz dice su nombre y su posición. Por
 ejemplo, hola, posición 1 de 2.
-Paso 5. Genere la imagen con el botón Generar. Se genera con
-todas las capas juntas. La vista previa en vivo ya la muestra
-actualizada sola; Generar sirve para forzarla y avisa con voz.
+Paso 5. La imagen ya está generada con todas las capas juntas
+y la vista previa en vivo la muestra actualizada sola. Si
+quiere forzarla, use Control + G, que además salta a Vista
+previa.
 Paso 6. En el editor de Capas también tiene los botones
 Compartir, Copiar y Guardar.
 
@@ -147,7 +149,7 @@ primera de la lista queda adelante.
 
 Tenga en cuenta que al mover una capa, el orden cambia en la
 lista al momento, y la vista previa en vivo se actualiza sola un
-ratito después, sin tocar Generar.
+ratito después, sin tocar ningún botón.
 
 5. Herramientas
 
