@@ -1,6 +1,7 @@
 package com.example.talleraccesible
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,22 +41,102 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalClipboardManager
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 @Composable
 fun PantallaTexto(vm: AppViewModel) {
     val t = vm.texto
+    val s = t.simple
+    val c = t.capas
+    // Vista previa en vivo: se regenera sola, en silencio, un rato después
+    // de cada cambio, para que el que ve no tenga que tocar Generar ni
+    // cambiar de pestaña. Sin botón para prenderla o apagarla: simplemente
+    // funciona.
+    LaunchedEffect(t.modo, s.texto, s.estilo, s.pos, s.yPct, s.auto, s.lienzo.snap(), c.capas.toList(), c.lienzo.snap()) {
+        delay(400)
+        vm.texto.generar(vm.entorno, silencioso = true)
+    }
     Column(
-        Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
+        Modifier.fillMaxSize().imePadding().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Text("Taller Accesible", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(16.dp)) {
-            Column(Modifier.padding(16.dp)) {
-                CampoLista("Modo", MODOS_TEXTO, t.modo, { t.modo = it })
+        VistaPreviaEnVivo(vm)
+        Column(
+            Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.padding(16.dp)) {
+                    CampoLista("Modo", MODOS_TEXTO, t.modo, { t.modo = it })
+                }
+            }
+            if (t.modo == "Simple") PanelSimple(vm) else PanelCapas(vm)
+        }
+    }
+}
+
+// Vista previa en vivo del Editor: la imagen que se está armando, siempre
+// visible arriba de los controles, con zoom de pellizco.
+@Composable
+private fun VistaPreviaEnVivo(vm: AppViewModel) {
+    val resultado = vm.texto.resultadoActual()
+    Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(4.dp)) {
+        if (resultado != null) {
+            ImagenConZoom(
+                bitmap = resultado.vista,
+                descripcion = resultado.descripcion,
+                modifier = Modifier.fillMaxWidth().height(300.dp),
+            )
+        } else {
+            Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
+                Text("La vista previa aparece acá sola mientras trabajás.")
             }
         }
-        if (t.modo == "Simple") PanelSimple(vm) else PanelCapas(vm)
+    }
+}
+
+// Imagen con zoom de pellizco, compartida por la vista previa en vivo del
+// Editor y por la pestaña Vista previa. El zoom vuelve al tamaño normal
+// cuando llega una imagen nueva.
+@Composable
+private fun ImagenConZoom(
+    bitmap: Bitmap,
+    descripcion: String,
+    modifier: Modifier = Modifier,
+) {
+    var escala by remember(bitmap) { mutableStateOf(1f) }
+    var desplazamiento by remember(bitmap) { mutableStateOf(Offset.Zero) }
+    Box(
+        modifier.background(Color.Black)
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val nuevaEscala = (escala * zoom).coerceIn(1f, 5f)
+                    escala = nuevaEscala
+                    desplazamiento = if (nuevaEscala <= 1f) Offset.Zero else desplazamiento + pan
+                }
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(onDoubleTap = {
+                    escala = if (escala > 1f) 1f else 2f
+                    desplazamiento = Offset.Zero
+                })
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = descripcion,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize()
+                .graphicsLayer(
+                    scaleX = escala,
+                    scaleY = escala,
+                    translationX = desplazamiento.x,
+                    translationY = desplazamiento.y,
+                ),
+        )
     }
 }
 
@@ -540,51 +621,17 @@ fun CampoSlider(
 @Composable
 fun PantallaVistaPrevia(vm: AppViewModel) {
     val resultado: Resultado? = vm.texto.resultadoActual()
-    var escala by remember { mutableStateOf(1f) }
-    var desplazamiento by remember { mutableStateOf(Offset.Zero) }
-
     if (resultado == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Aún no has generado ninguna imagen.")
         }
         return
     }
-    // Al generar una imagen nueva, el zoom vuelve al tamaño normal.
-    LaunchedEffect(resultado) {
-        escala = 1f
-        desplazamiento = Offset.Zero
-    }
-
-    Box(
-        Modifier.fillMaxSize().background(Color.Black)
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val nuevaEscala = (escala * zoom).coerceIn(1f, 5f)
-                    escala = nuevaEscala
-                    desplazamiento = if (nuevaEscala <= 1f) Offset.Zero else desplazamiento + pan
-                }
-            }
-            .pointerInput(Unit) {
-                detectTapGestures(onDoubleTap = {
-                    escala = if (escala > 1f) 1f else 2f
-                    desplazamiento = Offset.Zero
-                })
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(
-            bitmap = resultado.vista.asImageBitmap(),
-            contentDescription = resultado.descripcion,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize()
-                .graphicsLayer(
-                    scaleX = escala,
-                    scaleY = escala,
-                    translationX = desplazamiento.x,
-                    translationY = desplazamiento.y,
-                ),
-        )
-    }
+    ImagenConZoom(
+        bitmap = resultado.vista,
+        descripcion = resultado.descripcion,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
 
 // Diálogo con las opciones al guardar: formato, calidad JPG y carpeta.

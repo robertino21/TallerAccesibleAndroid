@@ -94,9 +94,9 @@ class SimpleState {
     var resultado by mutableStateOf<Resultado?>(null)
     var ocupado by mutableStateOf(false)
 
-    fun generar(env: Entorno) {
+    fun generar(env: Entorno, silencioso: Boolean = false) {
         val t = texto.trim()
-        if (t.isEmpty()) { env.decir("Escribe texto"); return }
+        if (t.isEmpty()) { if (!silencioso) env.decir("Escribe texto"); return }
         if (ocupado) return
         val l = lienzo.snap(); val e = estilo; val p = pos; val y = yPct; val a = auto
         env.ejecutar({ ocupado = it }, "Error al generar la imagen") {
@@ -107,8 +107,10 @@ class SimpleState {
                 Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa generada", s.avisos, s.png)
             }
             resultado = r
-            val extra = if (r.avisos.isEmpty()) "" else ". " + r.avisos.joinToString(". ")
-            env.decir("Vista previa lista. Puedes compartirla o guardarla.$extra")
+            if (!silencioso) {
+                val extra = if (r.avisos.isEmpty()) "" else ". " + r.avisos.joinToString(". ")
+                env.decir("Vista previa lista. Puedes compartirla o guardarla.$extra")
+            }
         }
     }
 
@@ -184,8 +186,8 @@ class CapasState {
         if (seleccion in capas.indices) capas[seleccion] = nueva
     }
 
-    fun generar(env: Entorno) {
-        if (capas.isEmpty()) { env.decir("Sin capas"); return }
+    fun generar(env: Entorno, silencioso: Boolean = false) {
+        if (capas.isEmpty()) { if (!silencioso) env.decir("Sin capas"); return }
         if (ocupado) return
         val l = lienzo.snap(); val lista = capas.toList()
         env.ejecutar({ ocupado = it }, "Error al generar las capas") {
@@ -196,8 +198,10 @@ class CapasState {
                 Resultado(Imagenes.vista(s.bitmap), uri, "Vista previa de capas", s.avisos, s.png)
             }
             resultado = r
-            val extra = if (r.avisos.isEmpty()) "" else ". " + r.avisos.joinToString(". ")
-            env.decir("Vista previa de capas lista.$extra")
+            if (!silencioso) {
+                val extra = if (r.avisos.isEmpty()) "" else ". " + r.avisos.joinToString(". ")
+                env.decir("Vista previa de capas lista.$extra")
+            }
         }
     }
 
@@ -215,7 +219,7 @@ class TextoState {
     // El resultado del modo actual, no el último que se generó en cualquier modo.
     fun resultadoActual(): Resultado? = if (modo == "Simple") simple.resultado else capas.resultado
 
-    fun generar(env: Entorno) = if (modo == "Simple") simple.generar(env) else capas.generar(env)
+    fun generar(env: Entorno, silencioso: Boolean = false) = if (modo == "Simple") simple.generar(env, silencioso) else capas.generar(env, silencioso)
     fun limpiar(env: Entorno) = if (modo == "Simple") simple.limpiar(env) else capas.limpiar(env)
 }
 
