@@ -195,10 +195,13 @@ fun CampoColor(
                             },
                     ) {
                         if (seleccion == nombre) {
+                            // Luminancia relativa (fórmula WCAG) para elegir
+                            // el color de la tilde según el fondo.
+                            val lum = 0.2126f * fondo.red + 0.7152f * fondo.green + 0.0722f * fondo.blue
                             Icon(
                                 Icons.Default.Check,
                                 contentDescription = null,
-                                tint = if (fondo.alpha < 0.5f || fondo.luminance() > 0.5f) Color.Black else Color.White,
+                                tint = if (fondo.alpha < 0.5f || lum > 0.5f) Color.Black else Color.White,
                             )
                         }
                     }
