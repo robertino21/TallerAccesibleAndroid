@@ -335,9 +335,9 @@ private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
                  OutlinedButton(onClick = { selector.launch("image/*") }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Cargar imagen de fondo") }
                  Text(if (l.fondoNombre.isEmpty()) "Sin fondo" else "Fondo: ${l.fondoNombre}")
              } else {
-                 CampoLista("Color de fondo", LISTA_COLORES, l.color1, { l.color1 = it })
+                 CampoColor("Color de fondo", LISTA_COLORES, l.color1, { l.color1 = it })
                  if (l.fondoTipo.contains("Degradado")) {
-                     CampoLista("Segundo color del degradado", LISTA_COLORES, l.color2, { l.color2 = it })
+                     CampoColor("Segundo color del degradado", LISTA_COLORES, l.color2, { l.color2 = it })
                  }
              }
          }
@@ -606,18 +606,18 @@ private fun EstiloEditor(
     )
     
     CampoSlider("Interlineado", e.inter, 0..100, { onChange(e.copy(inter = it)) })
-    CampoLista("Color del texto", colores, e.colorTexto, { onChange(e.copy(colorTexto = it)) })
+    CampoColor("Color del texto", colores, e.colorTexto, { onChange(e.copy(colorTexto = it)) })
     CampoLista("Alineación", if (permitirSin) ALINEACIONES_SIN else ALINEACIONES, e.align, { onChange(e.copy(align = it)) })
 
     CampoCheck("Borde", e.borde, { onChange(e.copy(borde = it)) })
     if (e.borde) {
-        CampoLista("Color del borde", LISTA_COLORES_SIN, e.colorBorde, { onChange(e.copy(colorBorde = it)) })
+        CampoColor("Color del borde", LISTA_COLORES_SIN, e.colorBorde, { onChange(e.copy(colorBorde = it)) })
         CampoSlider("Grosor", e.grosor, 0..20, { onChange(e.copy(grosor = it)) })
     }
     
     CampoCheck("Sombra", e.sombra, { onChange(e.copy(sombra = it)) })
     if (e.sombra) {
-        CampoLista("Color de la sombra", LISTA_COLORES_SIN, e.colorSombra, { onChange(e.copy(colorSombra = it)) })
+        CampoColor("Color de la sombra", LISTA_COLORES_SIN, e.colorSombra, { onChange(e.copy(colorSombra = it)) })
         CampoSlider("Desplazamiento X", e.sx, -50..50, { onChange(e.copy(sx = it)) })
         CampoSlider("Desplazamiento Y", e.sy, -50..50, { onChange(e.copy(sy = it)) })
         CampoSlider("Desenfoque", e.blur, 0..20, { onChange(e.copy(blur = it)) })
@@ -627,7 +627,7 @@ private fun EstiloEditor(
     
     CampoCheck("Caja de fondo", e.caja, { onChange(e.copy(caja = it)) })
     if (e.caja) {
-        CampoLista("Color de la caja", colores, e.colorCaja, { onChange(e.copy(colorCaja = it)) })
+        CampoColor("Color de la caja", colores, e.colorCaja, { onChange(e.copy(colorCaja = it)) })
         CampoSlider("Relleno", e.padding, 0..300, { onChange(e.copy(padding = it)) }, paso = 5)
         CampoSlider("Radio esquinas", e.radio, 0..200, { onChange(e.copy(radio = it)) })
     }

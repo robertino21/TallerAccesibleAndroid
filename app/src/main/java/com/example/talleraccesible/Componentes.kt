@@ -1,23 +1,31 @@
 package com.example.talleraccesible
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -46,8 +55,10 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -139,6 +150,61 @@ fun CampoCheck(label: String, marcado: Boolean, onChange: (Boolean) -> Unit, ena
         Checkbox(checked = marcado, onCheckedChange = null, enabled = enabled)
         Spacer(Modifier.width(12.dp))
         Text(label)
+    }
+}
+
+// Muestras de color: se ve el color en vez de leer su nombre en una lista.
+// La opción "Sin seleccionar" es un botón con texto, porque no tiene color.
+@Composable
+fun CampoColor(
+    label: String,
+    opciones: List<String>,
+    seleccion: String,
+    onSelect: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("$label: $seleccion", style = MaterialTheme.typography.labelMedium)
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            opciones.forEach { nombre ->
+                if (nombre == SIN) {
+                    OutlinedButton(
+                        onClick = { onSelect(nombre) },
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.size(48.dp),
+                    ) { Text("Sin", fontSize = 12.sp) }
+                } else {
+                    val entero = colorDe(nombre)
+                    val fondo = if (entero != null) Color(entero) else Color.Transparent
+                    Button(
+                        onClick = { onSelect(nombre) },
+                        colors = ButtonDefaults.buttonColors(containerColor = fondo),
+                        contentPadding = PaddingValues(0.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.size(48.dp)
+                            .border(
+                                width = if (seleccion == nombre) 3.dp else 1.dp,
+                                color = if (seleccion == nombre) MaterialTheme.colorScheme.primary else Color.Gray,
+                                shape = RoundedCornerShape(12.dp),
+                            )
+                            .semantics {
+                                contentDescription = nombre
+                                selected = seleccion == nombre
+                            },
+                    ) {
+                        if (seleccion == nombre) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                tint = if (fondo.alpha < 0.5f || fondo.luminance() > 0.5f) Color.Black else Color.White,
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
