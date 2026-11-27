@@ -1,7 +1,7 @@
 MANUAL DE TALLER ACCESIBLE PARA ANDROID
 Para personas ciegas, con TalkBack
-Versión 1.6.16
-26 de noviembre de 2026
+Versión 1.6.17
+27 de noviembre de 2026
 
 Este manual explica cómo usar Taller Accesible en Android, un
 programa para crear imágenes con texto, recortar fotos,
@@ -11,14 +11,14 @@ TalkBack.
 1. Qué es y qué necesita
 
 Taller Accesible para Android es un programa para el teléfono.
-Se usa con TalkBack. La versión actual es la 1.6.16. Se instala
+Se usa con TalkBack. La versión actual es la 1.6.17. Se instala
 con el archivo APK, y después se actualiza desde la misma
 aplicación.
 
 Para actualizar, vaya a la pestaña Ajustes y toque Buscar
 actualizaciones. Si hay una versión nueva, la aplicación
 pregunta antes de descargar. Toque Descargar para instalarla o
-Ahora no para dejarlo para después. Nunca descarga sola. Además, la aplicación revisa sola si hay una versión nueva cada vez que se abre. Si la hay, avisa con el mismo cartel para descargar o dejarlo para después. Si no hay nada nuevo, no dice nada. Desde la versión 1.6.8, la aplicación también anuncia los mensajes, como el de actualización y el de imagen guardada, para que los lea Jieshuo, el lector de pantalla chino, además de TalkBack. Desde la versión 1.6.9, la casilla Ajustar tamaño automáticamente también se anuncia cuando se para sobre ella. Y desde la versión 1.6.11, cada cuadro de texto tiene su nombre fijo arriba, para que TalkBack, Jieshuo y Tiresias lo anuncien siempre, esté vacío o con texto. Desde la versión 1.6.12, los botones Pegar y Borrar quedan alineados con el cuadro. Desde la versión 1.6.13, el manual está dentro de la aplicación, en Ajustes, en Acerca de y ayuda, y la aplicación revisa sola si hay una versión nueva cada vez que se abre. Desde la versión 1.6.14, el aviso de actualización muestra qué trae la versión nueva, y la descarga se anuncia cuando empieza. Desde la versión 1.6.15, la Vista previa es a pantalla completa y se puede acercar pellizcando, el Cortador tiene marco para recortar con el dedo, la lista de fuentes está limpia y el Editor tiene vista previa en vivo: la imagen se actualiza sola, el texto se arrastra con el dedo y los colores se eligen tocando la muestra. Desde la versión 1.6.16, todos los mensajes de la aplicación están en español neutro. Si ya
+Ahora no para dejarlo para después. Nunca descarga sola. Además, la aplicación revisa sola si hay una versión nueva cada vez que se abre. Si la hay, avisa con el mismo cartel para descargar o dejarlo para después. Si no hay nada nuevo, no dice nada. Desde la versión 1.6.8, la aplicación también anuncia los mensajes, como el de actualización y el de imagen guardada, para que los lea Jieshuo, el lector de pantalla chino, además de TalkBack. Desde la versión 1.6.9, la casilla Ajustar tamaño automáticamente también se anuncia cuando se para sobre ella. Y desde la versión 1.6.11, cada cuadro de texto tiene su nombre fijo arriba, para que TalkBack, Jieshuo y Tiresias lo anuncien siempre, esté vacío o con texto. Desde la versión 1.6.12, los botones Pegar y Borrar quedan alineados con el cuadro. Desde la versión 1.6.13, el manual está dentro de la aplicación, en Ajustes, en Acerca de y ayuda, y la aplicación revisa sola si hay una versión nueva cada vez que se abre. Desde la versión 1.6.14, el aviso de actualización muestra qué trae la versión nueva, y la descarga se anuncia cuando empieza. Desde la versión 1.6.15, la Vista previa es a pantalla completa y se puede acercar pellizcando, el Cortador tiene marco para recortar con el dedo, la lista de fuentes está limpia y el Editor tiene vista previa en vivo: la imagen se actualiza sola, el texto se arrastra con el dedo y los colores se eligen tocando la muestra. Desde la versión 1.6.16, todos los mensajes de la aplicación están en español neutro. Desde la versión 1.6.17, los colores se eligen con dos flechas, una para el color anterior y otra para el siguiente, y el botón siempre dice qué color está puesto; y el fondo se elige con un solo botón que muestra el fondo actual. Si ya
 está al día, dice que ya está al día. No acepte una versión
 vieja si se la ofrece. La última versión es la que tiene las
 correcciones.
@@ -78,17 +78,20 @@ texto. Pegar pone lo que tenga copiado, Borrar lo vacía, y los
 dos avisan con voz.
 Paso 4. Elija la fuente, el tamaño, el color del texto y la
 alineación.
-Los colores se eligen tocando la muestra de color, que se ve
-como un cuadrito de ese color, en vez de elegir el nombre en una
-lista.
+Los colores se eligen con dos flechas: la de la izquierda
+pasa al color anterior y la de la derecha pasa al siguiente.
+Entre las dos flechas se ve un cuadrito con el color actual, y
+el botón siempre dice qué color está puesto.
 Para conseguir más fuentes: en el estilo del texto tiene tres
 botones, Recargar, Importar y Buscar. Buscar abre un cuadro
 para buscar una fuente en Google Fonts: escriba el nombre, toque
 Buscar y si la encuentra toque Descargar y aplicar. Importar
 deja elegir un archivo de fuente, .ttf u .otf, que tenga en el
 teléfono. Recargar vuelve a leer la lista de fuentes.
-Paso 5. Elija el fondo, de color sólido, con degradado o con
-imagen.
+Paso 5. Elija el fondo con el botón Fondo, que muestra el
+fondo actual en un rectángulo: de color sólido, con degradado o
+con imagen. Cada vez que lo toca pasa al siguiente tipo y le
+dice cuál es.
 Paso 6. Opacidad del fondo. Si la pone en 0, el fondo queda
 transparente y al guardar se usa PNG. Si está en 100, el fondo
 se ve normal.
