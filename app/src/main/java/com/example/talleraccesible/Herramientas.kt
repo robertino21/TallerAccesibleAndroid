@@ -118,7 +118,7 @@ private fun SeccionCortador(vm: AppViewModel) {
                     }
                 }
                 bitmap?.let { RecorteTactil(it, c) }
-                Text("Arrastrá las esquinas del marco para elegir el recorte. Los deslizadores de abajo hacen lo mismo.")
+                Text("Arrastra las esquinas del marco para elegir el recorte. Los deslizadores de abajo hacen lo mismo.")
             }
             CampoSlider("Recorte izquierda (%)", c.recIzq, 0..80, { c.recIzq = it })
             CampoSlider("Recorte derecha (%)", c.recDer, 0..80, { c.recDer = it })
@@ -156,7 +156,7 @@ private fun RecorteTactil(bitmap: Bitmap, c: CortadorState) {
 
     BoxWithConstraints(
         Modifier.fillMaxWidth().height(320.dp)
-            .semantics { contentDescription = "Recorte táctil. Arrastrá las esquinas del marco para elegir qué parte de la foto queda. También podés ajustar el recorte con los deslizadores de abajo." }
+            .semantics { contentDescription = "Recorte táctil. Arrastra las esquinas del marco para elegir qué parte de la foto queda. También puedes ajustar el recorte con los deslizadores de abajo." }
     ) {
         val anchoCaja = with(densidad) { maxWidth.toPx() }
         val altoCaja = with(densidad) { maxHeight.toPx() }

@@ -483,7 +483,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     withContext(Dispatchers.Main) {
                         when {
                             urlDescarga == null -> if (!silencioso) entorno.decir("No hay archivo APK en la última versión.")
-                            !esMasNueva(tagVersion, instalada) -> if (!silencioso) entorno.decir("Ya estás al día, versión $instalada.")
+                            !esMasNueva(tagVersion, instalada) -> if (!silencioso) entorno.decir("Ya está al día, versión $instalada.")
                             else -> {
                                 actualizacionPendiente = Actualizacion(tagVersion, urlDescarga, notas)
                                 entorno.decir("Hay una nueva versión: $tagVersion. Revisa el aviso para descargarla.")
@@ -492,7 +492,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        if (!silencioso) entorno.decir("No se pudo verificar la actualización o ya estás al día.")
+                        if (!silencioso) entorno.decir("No se pudo verificar la actualización o ya está al día.")
                     }
                 }
             } catch (e: Exception) {
@@ -584,7 +584,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 contexto.startActivity(intentAjustes)
-                entorno.decir("Activa el permiso para instalar apps y volvé a intentar.")
+                entorno.decir("Activa el permiso para instalar apps y vuelve a intentarlo.")
                 return
             }
         }
@@ -606,7 +606,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             
         } catch (e: Exception) {
             entorno.decir("Error al abrir el instalador: ${e.message}")
-            entorno.decir("Activa el permiso para instalar apps desconocidas y volvé a buscar la actualización.")
+            entorno.decir("Activa el permiso para instalar apps desconocidas y vuelve a buscar la actualización.")
         }
     }
 
@@ -670,7 +670,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                             withContext(Dispatchers.Main) {
                                 resultadoBusqueda = urlDescarga
                                 nombreFuenteEncontrada = carpetaEncontrada
-                                entorno.decir("Encontrada: $carpetaEncontrada. Tocá descargar.")
+                                entorno.decir("Encontrada: $carpetaEncontrada. Toca Descargar.")
                             }
                         } else {
                             withContext(Dispatchers.Main) { entorno.decir("No se encontró archivo de fuente en esa carpeta.") }

@@ -93,9 +93,9 @@ private fun VistaPreviaEnVivo(vm: AppViewModel) {
         elevation = CardDefaults.cardElevation(4.dp),
         modifier = Modifier.semantics {
             contentDescription = if (t.modo == "Simple")
-                "Vista previa en vivo. Arrastrá la imagen para mover el texto hacia arriba o abajo. También podés usar el deslizador de posición."
+                "Vista previa en vivo. Arrastra la imagen para mover el texto hacia arriba o abajo. También puedes usar el deslizador de posición."
             else
-                "Vista previa en vivo. Arrastrá la imagen para mover la capa seleccionada. También podés usar los deslizadores de posición."
+                "Vista previa en vivo. Arrastra la imagen para mover la capa seleccionada. También puedes usar los deslizadores de posición."
         },
     ) {
         if (resultado != null) {
@@ -122,7 +122,7 @@ private fun VistaPreviaEnVivo(vm: AppViewModel) {
             )
         } else {
             Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
-                Text("La vista previa aparece acá sola mientras trabajás.")
+                Text("La vista previa aparece aquí sola mientras trabajas.")
             }
         }
     }
