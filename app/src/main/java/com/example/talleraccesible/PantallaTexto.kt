@@ -4,7 +4,14 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -526,60 +533,58 @@ fun CampoSlider(
 }
 
 @Composable
+// La vista previa es la imagen en pantalla completa, sin título ni
+// botones: Compartir, Copiar y Guardar ya están en el Editor. Se puede
+// acercar pellizcando la imagen y moverla con el dedo; un doble toque
+// vuelve al tamaño normal.
+@Composable
 fun PantallaVistaPrevia(vm: AppViewModel) {
     val resultado: Resultado? = vm.texto.resultadoActual()
-    var zoom by remember { mutableStateOf(1f) }
-    val context = LocalContext.current
-    val env = vm.entorno
+    var escala by remember { mutableStateOf(1f) }
+    var desplazamiento by remember { mutableStateOf(Offset.Zero) }
 
-    Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-         Text("Vista Previa", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-         if (resultado != null) {
-             Text("Zoom: ${(zoom * 100).toInt()}%", fontSize = 14.sp)
-             Slider(value = zoom, onValueChange = { zoom = it }, valueRange = 0.5f..3f, modifier = Modifier.semantics { contentDescription = "Zoom de la imagen, valor actual ${(zoom * 100).toInt()} por ciento" })
-             Card(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(4.dp)) {
-                 // El zoom cambia el tamaño real de la imagen y se puede desplazar.
-                 // El ancho se mide en el contenedor de fuera, sin desplazamiento:
-                 // con el desplazamiento en el mismo contenedor, el ancho
-                 // disponible era infinito y la imagen nunca cambiaba de tamaño.
-                 BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(360.dp)) {
-                     val lado = maxWidth * zoom
-                     val alto = lado * resultado.vista.height / resultado.vista.width
-                     Box(
-                         modifier = Modifier.fillMaxSize()
-                             .horizontalScroll(rememberScrollState())
-                             .verticalScroll(rememberScrollState())
-                             .padding(8.dp)
-                     ) {
-                         Image(
-                             bitmap = resultado.vista.asImageBitmap(),
-                             contentDescription = resultado.descripcion,
-                             modifier = Modifier.size(lado, alto),
-                         )
-                     }
-                 }
-             }
-             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                 Button(
-                     onClick = { if (resultado.uri != null) Almacen.compartir(context, resultado.uri) },
-                     modifier = Modifier.weight(1f).height(48.dp)
-                 ) { Text("Compartir") }
-                 Button(
-                     onClick = {
-                         if (resultado.uri != null && Almacen.copiar(context, resultado.uri)) env.decir("Imagen copiada")
-                         else env.decir("No se pudo copiar la imagen")
-                     },
-                     modifier = Modifier.weight(1f).height(48.dp)
-                 ) { Text("Copiar") }
-                 Button(
-                     onClick = { vm.pedirGuardar(resultado, "Texto") },
-                     modifier = Modifier.weight(1f).height(48.dp)
-                 ) { Text("Guardar") }
-             }
-         } else {
-             Text("Aún no has generado ninguna imagen.")
-         }
-     }
+    if (resultado == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Aún no has generado ninguna imagen.")
+        }
+        return
+    }
+    // Al generar una imagen nueva, el zoom vuelve al tamaño normal.
+    LaunchedEffect(resultado) {
+        escala = 1f
+        desplazamiento = Offset.Zero
+    }
+
+    Box(
+        Modifier.fillMaxSize().background(Color.Black)
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val nuevaEscala = (escala * zoom).coerceIn(1f, 5f)
+                    escala = nuevaEscala
+                    desplazamiento = if (nuevaEscala <= 1f) Offset.Zero else desplazamiento + pan
+                }
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(onDoubleTap = {
+                    escala = if (escala > 1f) 1f else 2f
+                    desplazamiento = Offset.Zero
+                })
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            bitmap = resultado.vista.asImageBitmap(),
+            contentDescription = resultado.descripcion,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize()
+                .graphicsLayer(
+                    scaleX = escala,
+                    scaleY = escala,
+                    translationX = desplazamiento.x,
+                    translationY = desplazamiento.y,
+                ),
+        )
+    }
 }
 
 // Diálogo con las opciones al guardar: formato, calidad JPG y carpeta.
