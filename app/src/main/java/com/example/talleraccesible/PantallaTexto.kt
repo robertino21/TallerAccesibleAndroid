@@ -15,13 +15,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -65,16 +63,23 @@ fun PantallaTexto(vm: AppViewModel) {
     ) {
         Text("Taller Accesible", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
         VistaPreviaEnVivo(vm)
-        Column(
-            Modifier.weight(1f).verticalScroll(rememberScrollState()),
+        // Lista perezosa: solo se arman los controles que entran en pantalla,
+        // así en teléfonos lentos el flick del lector no se traba y la lista
+        // se desplaza sola al cambiar el foco.
+        LazyColumn(
+            Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(16.dp)) {
-                Column(Modifier.padding(16.dp)) {
-                    CampoLista("Modo", MODOS_TEXTO, t.modo, { t.modo = it })
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(16.dp)) {
+                    Column(Modifier.padding(16.dp)) {
+                        CampoLista("Modo", MODOS_TEXTO, t.modo, { t.modo = it })
+                    }
                 }
             }
-            if (t.modo == "Simple") PanelSimple(vm) else PanelCapas(vm)
+            item {
+                if (t.modo == "Simple") PanelSimple(vm) else PanelCapas(vm)
+            }
         }
     }
 }

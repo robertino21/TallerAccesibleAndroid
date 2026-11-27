@@ -16,9 +16,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -52,14 +51,17 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun PantallaHerramientas(vm: AppViewModel) {
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+    // Lista perezosa: solo se arman las secciones que entran en pantalla,
+    // así en teléfonos lentos el flick del lector no se traba y la lista
+    // se desplaza sola al cambiar el foco.
+    LazyColumn(
+        Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text("Herramientas", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-        SeccionCortador(vm)
-        SeccionNormalizar(vm)
-        SeccionCollage(vm)
+        item { Text("Herramientas", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) }
+        item { SeccionCortador(vm) }
+        item { SeccionNormalizar(vm) }
+        item { SeccionCollage(vm) }
     }
 }
 
