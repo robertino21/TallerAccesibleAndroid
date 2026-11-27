@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.talleraccesible"
         minSdk = 29
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.6.13"
+        versionCode = 10
+        versionName = "1.6.14"
     }
 
     signingConfigs {
