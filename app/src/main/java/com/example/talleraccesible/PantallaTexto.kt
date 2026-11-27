@@ -49,10 +49,11 @@ fun PantallaTexto(vm: AppViewModel) {
     val t = vm.texto
     val s = t.simple
     val c = t.capas
+    val env = vm.entorno
+    val importar = rememberImportadorFuentes(vm)
     // Vista previa en vivo: se regenera sola, en silencio, un rato después
-    // de cada cambio, para que el que ve no tenga que tocar Generar ni
-    // cambiar de pestaña. Sin botón para prenderla o apagarla: simplemente
-    // funciona.
+    // de cada cambio, así la imagen que se ve arriba siempre es la actual.
+    // Sin botón para prenderla o apagarla: simplemente funciona.
     LaunchedEffect(t.modo, s.texto, s.estilo, s.pos, s.yPct, s.auto, s.lienzo.snap(), c.capas.toList(), c.lienzo.snap()) {
         delay(400)
         vm.texto.generar(vm.entorno, silencioso = true)
@@ -65,20 +66,78 @@ fun PantallaTexto(vm: AppViewModel) {
         VistaPreviaEnVivo(vm)
         // Lista perezosa: solo se arman los controles que entran en pantalla,
         // así en teléfonos lentos el flick del lector no se traba y la lista
-        // se desplaza sola al cambiar el foco.
+        // se desplaza sola al cambiar el foco. Cada sección es su propio
+        // bloque, con su clave, para que el foco no salte adentro de un
+        // bloque gigante.
         LazyColumn(
             Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            item {
+            item(key = "modo") {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(16.dp)) {
                     Column(Modifier.padding(16.dp)) {
                         CampoLista("Modo", MODOS_TEXTO, t.modo, { t.modo = it })
                     }
                 }
             }
-            item {
-                if (t.modo == "Simple") PanelSimple(vm) else PanelCapas(vm)
+            if (t.modo == "Simple") {
+                item(key = "texto") { TarjetaTextoSimple(vm) }
+                item(key = "lienzo") { LienzoTamano(s.lienzo) }
+                item(key = "fondo") { LienzoFondo(s.lienzo) { env.decir(it) } }
+                item(key = "estilo-texto") {
+                    EstiloTexto(
+                        e = s.estilo,
+                        onChange = { s.estilo = it },
+                        fuentes = vm.fuentes,
+                        permitirSin = false,
+                        onRecargar = { vm.recargarFuentes() },
+                        onImportar = importar,
+                        autoActivo = s.auto,
+                        onBuscarFuente = { vm.buscarFuenteEnGitHub(it) },
+                        onDescargarFuente = { url, nombre -> vm.descargarFuenteDeUrl(url, nombre) },
+                        resultadoBusquedaEncontrado = vm.resultadoBusqueda,
+                        nombreFuenteEncontrada = vm.nombreFuenteEncontrada,
+                        buscandoEstado = vm.buscandoFuente
+                    )
+                }
+                item(key = "estilo-borde") { EstiloBorde(e = s.estilo, onChange = { s.estilo = it }) }
+                item(key = "estilo-sombra") { EstiloSombra(e = s.estilo, onChange = { s.estilo = it }) }
+                item(key = "estilo-caja") { EstiloCaja(e = s.estilo, onChange = { s.estilo = it }, colores = LISTA_COLORES) }
+                item(key = "posicion") { TarjetaPosicionSimple(vm) }
+                item(key = "botones") { FilaBotonesSimple(vm) }
+            } else {
+                item(key = "lienzo") { LienzoTamano(c.lienzo) }
+                item(key = "fondo") { LienzoFondo(c.lienzo) { env.decir(it) } }
+                item(key = "capas") { TarjetaListaCapas(vm) }
+                when (val capa = c.capaActual) {
+                    is CapaTexto -> {
+                        item(key = "contenido") { TarjetaContenidoCapa(vm) }
+                        item(key = "estilo-texto") {
+                            EstiloTexto(
+                                e = capa.estilo,
+                                onChange = { c.actualizar(capa.copy(estilo = it)) },
+                                fuentes = vm.fuentes,
+                                permitirSin = true,
+                                onRecargar = { vm.recargarFuentes() },
+                                onImportar = importar,
+                                onBuscarFuente = { vm.buscarFuenteEnGitHub(it) },
+                                onDescargarFuente = { url, nombre -> vm.descargarFuenteDeUrl(url, nombre) },
+                                resultadoBusquedaEncontrado = vm.resultadoBusqueda,
+                                nombreFuenteEncontrada = vm.nombreFuenteEncontrada,
+                                buscandoEstado = vm.buscandoFuente
+                            )
+                        }
+                        item(key = "estilo-borde") { EstiloBorde(e = capa.estilo, onChange = { c.actualizar(capa.copy(estilo = it)) }) }
+                        item(key = "estilo-sombra") { EstiloSombra(e = capa.estilo, onChange = { c.actualizar(capa.copy(estilo = it)) }) }
+                        item(key = "estilo-caja") { EstiloCaja(e = capa.estilo, onChange = { c.actualizar(capa.copy(estilo = it)) }, colores = LISTA_COLORES_SIN) }
+                        item(key = "posicion") { TarjetaPosicionCapa(vm) }
+                    }
+                    is CapaImagen -> {
+                        item(key = "posicion") { TarjetaPosicionCapa(vm) }
+                    }
+                    null -> {}
+                }
+                item(key = "botones") { FilaBotonesCapas(vm) }
             }
         }
     }
@@ -198,14 +257,18 @@ private fun ImagenConZoom(
     }
 }
 
+// ------------------------------------------------------------------
+// Editor dividido en bloques: cada tarjeta es su propio bloque de la
+// lista perezosa, con su clave, para que el foco del lector no salte
+// adentro de un bloque gigante. El botón Generar ya no está: la imagen
+// se genera sola y se muestra en la vista previa en vivo.
+// ------------------------------------------------------------------
+
 @Composable
-private fun PanelSimple(vm: AppViewModel) {
+private fun TarjetaTextoSimple(vm: AppViewModel) {
     val env = vm.entorno
     val s = vm.texto.simple
-    val importar = rememberImportadorFuentes(vm)
     val clipboard = LocalClipboardManager.current
-    val context = LocalContext.current 
-    
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
          Column(Modifier.padding(16.dp)) {
              Row(verticalAlignment = Alignment.Top) {
@@ -252,28 +315,11 @@ private fun PanelSimple(vm: AppViewModel) {
              )
          }
      }
-     
-     LienzoEditorModerno(s.lienzo) { env.decir(it) }
-     
-     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
-         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-             EstiloEditor(
-                 e = s.estilo, 
-                 onChange = { s.estilo = it }, 
-                 fuentes = vm.fuentes, 
-                 permitirSin = false,
-                 onRecargar = { vm.recargarFuentes() }, 
-                 onImportar = importar,
-                 autoActivo = s.auto,
-                 onBuscarFuente = { vm.buscarFuenteEnGitHub(it) },
-                 onDescargarFuente = { url, nombre -> vm.descargarFuenteDeUrl(url, nombre) },
-                 resultadoBusquedaEncontrado = vm.resultadoBusqueda,
-                 nombreFuenteEncontrada = vm.nombreFuenteEncontrada,
-                 buscandoEstado = vm.buscandoFuente
-             )
-         }
-     }
-     
+}
+
+@Composable
+private fun TarjetaPosicionSimple(vm: AppViewModel) {
+    val s = vm.texto.simple
      Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
          Column(Modifier.padding(16.dp)) {
              Seccion("Posición")
@@ -283,16 +329,17 @@ private fun PanelSimple(vm: AppViewModel) {
              }
          }
      }
-     
-     Row(
-         modifier = Modifier.fillMaxWidth(),
-         horizontalArrangement = Arrangement.spacedBy(8.dp)
-     ) {
-         Button(
-             onClick = { s.generar(env) },
-             modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
-         ) { Text("Generar", fontSize = 14.sp) }
-         
+}
+
+@Composable
+private fun FilaBotonesSimple(vm: AppViewModel) {
+    val env = vm.entorno
+    val s = vm.texto.simple
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
          Button(
              onClick = { 
                  if (s.resultado?.uri != null) Almacen.compartir(context, s.resultado!!.uri!!)
@@ -308,30 +355,39 @@ private fun PanelSimple(vm: AppViewModel) {
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Guardar", fontSize = 14.sp) }
          
+        
          OutlinedButton(
              onClick = { vm.limpiarTodo() },
              modifier = Modifier.height(56.dp), 
              shape = RoundedCornerShape(12.dp)
          ) { Text("Limpiar", fontSize = 14.sp) }
-     }
+    }
 }
 
 @Composable
-private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
-    val ctx = LocalContext.current
-    val selector = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        if (uri != null) { l.fondoUri = uri; l.fondoNombre = Imagenes.nombre(ctx, uri); decir("Fondo cargado") }
-    }
+private fun LienzoTamano(l: LienzoState) {
     val fijo = PRESETS.first { it.nombre == l.preset }.ancho != null
-    
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
-         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) { 
-             Seccion("Lienzo y fondo")
+         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+             Seccion("Lienzo")
              CampoLista("Tamaño predefinido", LISTA_PRESETS, l.preset, { l.elegirPreset(it) })
              if (!fijo) {
                  CampoSlider("Ancho (px)", l.ancho, 100..4000, { l.ancho = it }, paso = 10)
                  CampoSlider("Alto (px)", l.alto, 100..4000, { l.alto = it }, paso = 10)
              }
+         }
+     }
+}
+
+@Composable
+private fun LienzoFondo(l: LienzoState, decir: (String) -> Unit) {
+    val ctx = LocalContext.current
+    val selector = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) { l.fondoUri = uri; l.fondoNombre = Imagenes.nombre(ctx, uri); decir("Fondo cargado") }
+    }
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
+         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+             Seccion("Fondo")
              CampoFondo(l.fondoTipo, l.color1, l.color2, l.fondoUri, { l.fondoTipo = it })
              
              CampoSlider("Opacidad del fondo", l.opacidadFondo, 0..100, { l.opacidadFondo = it })
@@ -350,12 +406,151 @@ private fun LienzoEditorModerno(l: LienzoState, decir: (String) -> Unit) {
 }
 
 @Composable
-private fun PanelCapas(vm: AppViewModel) {
+private fun EstiloTexto(
+    e: EstiloUi, 
+    onChange: (EstiloUi) -> Unit, 
+    fuentes: List<String>, 
+    permitirSin: Boolean, 
+    onRecargar: () -> Unit, 
+    onImportar: () -> Unit,
+    autoActivo: Boolean = false,
+    onBuscarFuente: ((String) -> Unit)? = null,
+    onDescargarFuente: (String, String) -> Unit = { _, _ -> },
+    resultadoBusquedaEncontrado: String? = null,
+    nombreFuenteEncontrada: String? = null,
+    buscandoEstado: Boolean = false
+) {
+    val listaFuentes = if (permitirSin) listOf(SIN) + fuentes else fuentes
+    val colores = if (permitirSin) LISTA_COLORES_SIN else LISTA_COLORES
+    
+    var mostrarDialogoFuente by remember { mutableStateOf(false) }
+    var textoBusqueda by remember { mutableStateOf("") }
+
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Seccion("Estilo del texto")
+            CampoLista("Fuente", listaFuentes, e.fuente, { onChange(e.copy(fuente = it)) })
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onRecargar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Recargar") }
+                OutlinedButton(onClick = onImportar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Importar") }
+                OutlinedButton(
+                    onClick = { mostrarDialogoFuente = true },
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                ) { Text("Buscar") }
+            }
+
+            // DIÁLOGO DE BÚSQUEDA DE FUENTES
+            if (mostrarDialogoFuente) {
+                AlertDialog(
+                    onDismissRequest = { mostrarDialogoFuente = false },
+                    title = { Text("Buscar en Google Fonts") },
+                    text = {
+                        Column {
+                            Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("Buscar fuente", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                                OutlinedTextField(
+                                    value = textoBusqueda,
+                                    onValueChange = { textoBusqueda = it },
+                                    placeholder = { Text("Ej: Montserrat, Roboto...") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = { onBuscarFuente?.invoke(textoBusqueda) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Buscar") }
+
+                            if (buscandoEstado) {
+                                Spacer(Modifier.height(8.dp))
+                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                            }
+
+                            if (resultadoBusquedaEncontrado != null && nombreFuenteEncontrada != null) {
+                                Spacer(Modifier.height(16.dp))
+                                Text("Encontrada: $nombreFuenteEncontrada", fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(8.dp))
+                                Button(
+                                    onClick = {
+                                        onDescargarFuente(resultadoBusquedaEncontrado, nombreFuenteEncontrada)
+                                        mostrarDialogoFuente = false
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text("Descargar y aplicar") }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { mostrarDialogoFuente = false }) { Text("Cerrar") }
+                    }
+                )
+            }
+
+            CampoSlider(
+                etiqueta = "Tamaño de texto", 
+                valor = e.tam, 
+                rango = 10..300, 
+                onValor = { onChange(e.copy(tam = it)) },
+                habilitado = !autoActivo 
+            )
+
+            CampoSlider("Interlineado", e.inter, 0..100, { onChange(e.copy(inter = it)) })
+            CampoColor("Color del texto", colores, e.colorTexto, { onChange(e.copy(colorTexto = it)) })
+            CampoLista("Alineación", if (permitirSin) ALINEACIONES_SIN else ALINEACIONES, e.align, { onChange(e.copy(align = it)) })
+        }
+    }
+}
+
+@Composable
+private fun EstiloBorde(e: EstiloUi, onChange: (EstiloUi) -> Unit) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CampoCheck("Borde", e.borde, { onChange(e.copy(borde = it)) })
+            if (e.borde) {
+                CampoColor("Color del borde", LISTA_COLORES_SIN, e.colorBorde, { onChange(e.copy(colorBorde = it)) })
+                CampoSlider("Grosor", e.grosor, 0..20, { onChange(e.copy(grosor = it)) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun EstiloSombra(e: EstiloUi, onChange: (EstiloUi) -> Unit) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CampoCheck("Sombra", e.sombra, { onChange(e.copy(sombra = it)) })
+            if (e.sombra) {
+                CampoColor("Color de la sombra", LISTA_COLORES_SIN, e.colorSombra, { onChange(e.copy(colorSombra = it)) })
+                CampoSlider("Desplazamiento X", e.sx, -50..50, { onChange(e.copy(sx = it)) })
+                CampoSlider("Desplazamiento Y", e.sy, -50..50, { onChange(e.copy(sy = it)) })
+                CampoSlider("Desenfoque", e.blur, 0..20, { onChange(e.copy(blur = it)) })
+
+                CampoSlider("Opacidad de la sombra (%)", e.sombraOpacidad, 0..100, { onChange(e.copy(sombraOpacidad = it)) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun EstiloCaja(e: EstiloUi, onChange: (EstiloUi) -> Unit, colores: List<String>) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CampoCheck("Caja de fondo", e.caja, { onChange(e.copy(caja = it)) })
+            if (e.caja) {
+                CampoColor("Color de la caja", colores, e.colorCaja, { onChange(e.copy(colorCaja = it)) })
+                CampoSlider("Relleno", e.padding, 0..300, { onChange(e.copy(padding = it)) }, paso = 5)
+                CampoSlider("Radio esquinas", e.radio, 0..200, { onChange(e.copy(radio = it)) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun TarjetaListaCapas(vm: AppViewModel) {
     val env = vm.entorno
     val c = vm.texto.capas
     val ctx = LocalContext.current
-    val clipboard = LocalClipboardManager.current
-    val importar = rememberImportadorFuentes(vm)
     var dlgTexto by remember { mutableStateOf(false) }
     var dlgRenombrar by remember { mutableStateOf(false) }
     var imagenPendiente by remember { mutableStateOf<Uri?>(null) }
@@ -370,8 +565,6 @@ private fun PanelCapas(vm: AppViewModel) {
             imagenPendiente = uri
         }
     }
-    
-    LienzoEditorModerno(c.lienzo) { env.decir(it) }
     
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
          Column(Modifier.padding(16.dp)) {
@@ -404,83 +597,104 @@ private fun PanelCapas(vm: AppViewModel) {
              BotonAccion("Subir capa", { c.mover(-1, env) }, enabled = haySeleccion, principal = false)
              BotonAccion("Bajar capa", { c.mover(1, env) }, enabled = haySeleccion, principal = false)
              BotonAccion("Eliminar capa", { c.eliminar(env) }, enabled = haySeleccion, principal = false)
-             
-             when (val capa = c.capaActual) {
-                 null -> Text("Agrega o selecciona una capa")
-                 is CapaTexto -> {
-                     Seccion("Propiedades de ${capa.nombre}")
-                     Row(verticalAlignment = Alignment.Top) {
-                         Column(Modifier.weight(1f).semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                             Text("Contenido", fontWeight = FontWeight.Medium, fontSize = 16.sp)
-                             OutlinedTextField(
-                                 value = capa.contenido, onValueChange = { c.actualizar(capa.copy(contenido = it)) },
-                                 minLines = 3,
-                                 modifier = Modifier.fillMaxWidth()
-                                     .onPreviewKeyEvent { ev ->
-                                         if (ev.type == KeyEventType.KeyDown && ev.isCtrlPressed &&
-                                             (ev.key == Key.Enter || ev.key == Key.NumPadEnter)
-                                         ) {
-                                             c.generar(env); true
-                                         } else false
-                                     },
-                                 shape = RoundedCornerShape(12.dp)
-                             )
-                         }
-                         Spacer(Modifier.width(8.dp))
-                         // Los botones quedan a la altura del cuadro, no de la etiqueta fija de arriba (etiqueta ~20 dp + 4 dp de separación).
-                         Column(Modifier.padding(top = 24.dp)) {
-                             Button(
-                                 onClick = { c.actualizar(capa.copy(contenido = clipboard.getText()?.text ?: "")); env.decir("Texto pegado") },
-                                 modifier = Modifier.padding(top = 8.dp), shape = RoundedCornerShape(8.dp)
-                             ) { Text("Pegar") }
+        }
+    }
+    
+     if (dlgTexto) {
+         DialogoNombre("Nueva capa de texto", "", { c.errorNombre(it) }, { c.agregarTexto(it, env); dlgTexto = false }, { dlgTexto = false })
+     }
+     imagenPendiente?.let { uri ->
+         DialogoNombre("Nueva capa de imagen", Imagenes.nombre(ctx, uri).substringBeforeLast('.'), { c.errorNombre(it) }, { c.agregarImagen(it, uri, env); imagenPendiente = null }, { imagenPendiente = null })
+     }
+     if (dlgRenombrar) {
+         val actual = c.capaActual
+         if (actual == null) dlgRenombrar = false
+         else DialogoNombre("Renombrar capa", actual.nombre, { c.errorNombre(it, ignorar = c.seleccion) }, { c.renombrar(it, env); dlgRenombrar = false }, { dlgRenombrar = false })
+     }
+}
 
-                             Spacer(Modifier.height(8.dp))
-
-                             OutlinedButton(
-                                 onClick = { c.actualizar(capa.copy(contenido = "")); env.decir("Texto borrado") },
-                                 modifier = Modifier.height(40.dp),
-                                 shape = RoundedCornerShape(8.dp),
-                                 contentPadding = PaddingValues(horizontal = 8.dp)
-                             ) {
-                                 Icon(imageVector = Icons.Default.Delete, contentDescription = "Borrar texto")
-                             }
-                         }
-                     }
-                     EstiloEditor(
-                         e = capa.estilo, 
-                         onChange = { c.actualizar(capa.copy(estilo = it)) }, 
-                         fuentes = vm.fuentes, 
-                         permitirSin = true, 
-                         onRecargar = { vm.recargarFuentes() }, 
-                         onImportar = importar,
-                         onBuscarFuente = { vm.buscarFuenteEnGitHub(it) },
-                         onDescargarFuente = { url, nombre -> vm.descargarFuenteDeUrl(url, nombre) },
-                         resultadoBusquedaEncontrado = vm.resultadoBusqueda,
-                         nombreFuenteEncontrada = vm.nombreFuenteEncontrada,
-                         buscandoEstado = vm.buscandoFuente
+@Composable
+private fun TarjetaContenidoCapa(vm: AppViewModel) {
+    val env = vm.entorno
+    val c = vm.texto.capas
+    val clipboard = LocalClipboardManager.current
+    val capa = c.capaActual as? CapaTexto ?: return
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(16.dp)) {
+             Seccion("Propiedades de ${capa.nombre}")
+             Row(verticalAlignment = Alignment.Top) {
+                 Column(Modifier.weight(1f).semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                     Text("Contenido", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                     OutlinedTextField(
+                         value = capa.contenido, onValueChange = { c.actualizar(capa.copy(contenido = it)) },
+                         minLines = 3,
+                         modifier = Modifier.fillMaxWidth()
+                             .onPreviewKeyEvent { ev ->
+                                 if (ev.type == KeyEventType.KeyDown && ev.isCtrlPressed &&
+                                     (ev.key == Key.Enter || ev.key == Key.NumPadEnter)
+                                 ) {
+                                     c.generar(env); true
+                                 } else false
+                             },
+                         shape = RoundedCornerShape(12.dp)
                      )
-                     CampoSlider("Posición X (%)", capa.xPct, -50..150, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
-                     CampoSlider("Posición Y (%)", capa.yPct, -50..150, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
                  }
-                 is CapaImagen -> {
-                     Seccion("Propiedades de ${capa.nombre}")
-                     CampoSlider("Escala (%)", capa.escala, 10..300, { c.actualizar(capa.copy(escala = it)) }, paso = 5)
-                     CampoSlider("Posición X (%)", capa.xPct, -50..150, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
-                     CampoSlider("Posición Y (%)", capa.yPct, -50..150, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
+                 Spacer(Modifier.width(8.dp))
+                 // Los botones quedan a la altura del cuadro, no de la etiqueta fija de arriba (etiqueta ~20 dp + 4 dp de separación).
+                 Column(Modifier.padding(top = 24.dp)) {
+                     Button(
+                         onClick = { c.actualizar(capa.copy(contenido = clipboard.getText()?.text ?: "")); env.decir("Texto pegado") },
+                         modifier = Modifier.padding(top = 8.dp), shape = RoundedCornerShape(8.dp)
+                     ) { Text("Pegar") }
+
+                     Spacer(Modifier.height(8.dp))
+
+                     OutlinedButton(
+                         onClick = { c.actualizar(capa.copy(contenido = "")); env.decir("Texto borrado") },
+                         modifier = Modifier.height(40.dp),
+                         shape = RoundedCornerShape(8.dp),
+                         contentPadding = PaddingValues(horizontal = 8.dp)
+                     ) {
+                         Icon(imageVector = Icons.Default.Delete, contentDescription = "Borrar texto")
+                     }
                  }
              }
-         }
-     }
-     
-     Row(
-         modifier = Modifier.fillMaxWidth(),
-         horizontalArrangement = Arrangement.spacedBy(8.dp)
-     ) {
-         Button(
-             onClick = { c.generar(env) },
-             modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
-         ) { Text("Generar", fontSize = 14.sp) }
-         
+        }
+    }
+}
+
+@Composable
+private fun TarjetaPosicionCapa(vm: AppViewModel) {
+    val c = vm.texto.capas
+    val capa = c.capaActual ?: return
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(2.dp), shape = RoundedCornerShape(16.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            when (capa) {
+                is CapaTexto -> {
+                    Seccion("Posición")
+                    CampoSlider("Posición X (%)", capa.xPct, -50..150, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
+                    CampoSlider("Posición Y (%)", capa.yPct, -50..150, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
+                }
+                is CapaImagen -> {
+                    Seccion("Propiedades de ${capa.nombre}")
+                    CampoSlider("Escala (%)", capa.escala, 10..300, { c.actualizar(capa.copy(escala = it)) }, paso = 5)
+                    CampoSlider("Posición X (%)", capa.xPct, -50..150, { c.actualizar(capa.copy(xPct = it)) }, paso = 1)
+                    CampoSlider("Posición Y (%)", capa.yPct, -50..150, { c.actualizar(capa.copy(yPct = it)) }, paso = 1)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilaBotonesCapas(vm: AppViewModel) {
+    val env = vm.entorno
+    val c = vm.texto.capas
+    val ctx = LocalContext.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
          Button(
              onClick = { 
                  val r = c.resultado
@@ -490,6 +704,7 @@ private fun PanelCapas(vm: AppViewModel) {
              enabled = c.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Compartir", fontSize = 14.sp) }
+
 
          Button(
              onClick = {
@@ -507,136 +722,9 @@ private fun PanelCapas(vm: AppViewModel) {
              enabled = c.resultado != null,
              modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(12.dp)
          ) { Text("Guardar", fontSize = 14.sp) }
-     }
-     
-     if (dlgTexto) {
-         DialogoNombre("Nueva capa de texto", "", { c.errorNombre(it) }, { c.agregarTexto(it, env); dlgTexto = false }, { dlgTexto = false })
-     }
-     imagenPendiente?.let { uri ->
-         DialogoNombre("Nueva capa de imagen", Imagenes.nombre(ctx, uri).substringBeforeLast('.'), { c.errorNombre(it) }, { c.agregarImagen(it, uri, env); imagenPendiente = null }, { imagenPendiente = null })
-     }
-     if (dlgRenombrar) {
-         val actual = c.capaActual
-         if (actual == null) dlgRenombrar = false
-         else DialogoNombre("Renombrar capa", actual.nombre, { c.errorNombre(it, ignorar = c.seleccion) }, { c.renombrar(it, env); dlgRenombrar = false }, { dlgRenombrar = false })
-     }
-}
-
-@Composable
-private fun EstiloEditor(
-    e: EstiloUi, 
-    onChange: (EstiloUi) -> Unit, 
-    fuentes: List<String>, 
-    permitirSin: Boolean, 
-    onRecargar: () -> Unit, 
-    onImportar: () -> Unit,
-    autoActivo: Boolean = false,
-    onBuscarFuente: ((String) -> Unit)? = null,
-    onDescargarFuente: (String, String) -> Unit = { _, _ -> },
-    resultadoBusquedaEncontrado: String? = null,
-    nombreFuenteEncontrada: String? = null,
-    buscandoEstado: Boolean = false
-) {
-    val listaFuentes = if (permitirSin) listOf(SIN) + fuentes else fuentes
-    val colores = if (permitirSin) LISTA_COLORES_SIN else LISTA_COLORES
-    
-    var mostrarDialogoFuente by remember { mutableStateOf(false) }
-    var textoBusqueda by remember { mutableStateOf("") }
-
-    Seccion("Estilo del texto")
-    CampoLista("Fuente", listaFuentes, e.fuente, { onChange(e.copy(fuente = it)) })
-    
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = onRecargar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Recargar") }
-        OutlinedButton(onClick = onImportar, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Importar") }
-        OutlinedButton(
-            onClick = { mostrarDialogoFuente = true },
-            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
-        ) { Text("Buscar") }
-    }
-
-    // DIÁLOGO DE BÚSQUEDA DE FUENTES
-    if (mostrarDialogoFuente) {
-        AlertDialog(
-            onDismissRequest = { mostrarDialogoFuente = false },
-            title = { Text("Buscar en Google Fonts") },
-            text = {
-                Column {
-                    Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Buscar fuente", fontWeight = FontWeight.Medium, fontSize = 16.sp)
-                        OutlinedTextField(
-                            value = textoBusqueda,
-                            onValueChange = { textoBusqueda = it },
-                            placeholder = { Text("Ej: Montserrat, Roboto...") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = { onBuscarFuente?.invoke(textoBusqueda) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Buscar") }
-                    
-                    if (buscandoEstado) {
-                        Spacer(Modifier.height(8.dp))
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    }
-                    
-                    if (resultadoBusquedaEncontrado != null && nombreFuenteEncontrada != null) {
-                        Spacer(Modifier.height(16.dp))
-                        Text("Encontrada: $nombreFuenteEncontrada", fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
-                        Button(
-                            onClick = {
-                                onDescargarFuente(resultadoBusquedaEncontrado, nombreFuenteEncontrada)
-                                mostrarDialogoFuente = false
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Descargar y aplicar") }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { mostrarDialogoFuente = false }) { Text("Cerrar") }
-            }
-        )
-    }
-    
-    CampoSlider(
-        etiqueta = "Tamaño de texto", 
-        valor = e.tam, 
-        rango = 10..300, 
-        onValor = { onChange(e.copy(tam = it)) },
-        habilitado = !autoActivo 
-    )
-    
-    CampoSlider("Interlineado", e.inter, 0..100, { onChange(e.copy(inter = it)) })
-    CampoColor("Color del texto", colores, e.colorTexto, { onChange(e.copy(colorTexto = it)) })
-    CampoLista("Alineación", if (permitirSin) ALINEACIONES_SIN else ALINEACIONES, e.align, { onChange(e.copy(align = it)) })
-
-    CampoCheck("Borde", e.borde, { onChange(e.copy(borde = it)) })
-    if (e.borde) {
-        CampoColor("Color del borde", LISTA_COLORES_SIN, e.colorBorde, { onChange(e.copy(colorBorde = it)) })
-        CampoSlider("Grosor", e.grosor, 0..20, { onChange(e.copy(grosor = it)) })
-    }
-    
-    CampoCheck("Sombra", e.sombra, { onChange(e.copy(sombra = it)) })
-    if (e.sombra) {
-        CampoColor("Color de la sombra", LISTA_COLORES_SIN, e.colorSombra, { onChange(e.copy(colorSombra = it)) })
-        CampoSlider("Desplazamiento X", e.sx, -50..50, { onChange(e.copy(sx = it)) })
-        CampoSlider("Desplazamiento Y", e.sy, -50..50, { onChange(e.copy(sy = it)) })
-        CampoSlider("Desenfoque", e.blur, 0..20, { onChange(e.copy(blur = it)) })
-        
-        CampoSlider("Opacidad de la sombra (%)", e.sombraOpacidad, 0..100, { onChange(e.copy(sombraOpacidad = it)) })
-    }
-    
-    CampoCheck("Caja de fondo", e.caja, { onChange(e.copy(caja = it)) })
-    if (e.caja) {
-        CampoColor("Color de la caja", colores, e.colorCaja, { onChange(e.copy(colorCaja = it)) })
-        CampoSlider("Relleno", e.padding, 0..300, { onChange(e.copy(padding = it)) }, paso = 5)
-        CampoSlider("Radio esquinas", e.radio, 0..200, { onChange(e.copy(radio = it)) })
     }
 }
+
 
 @Composable
 private fun rememberImportadorFuentes(vm: AppViewModel): () -> Unit {
