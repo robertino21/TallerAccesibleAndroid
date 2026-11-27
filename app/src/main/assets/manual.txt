@@ -1,6 +1,6 @@
 MANUAL DE TALLER ACCESIBLE PARA ANDROID
 Para personas ciegas, con TalkBack
-Versión 1.6.15
+Versión 1.6.16
 26 de noviembre de 2026
 
 Este manual explica cómo usar Taller Accesible en Android, un
@@ -11,14 +11,14 @@ TalkBack.
 1. Qué es y qué necesita
 
 Taller Accesible para Android es un programa para el teléfono.
-Se usa con TalkBack. La versión actual es la 1.6.15. Se instala
+Se usa con TalkBack. La versión actual es la 1.6.16. Se instala
 con el archivo APK, y después se actualiza desde la misma
 aplicación.
 
 Para actualizar, vaya a la pestaña Ajustes y toque Buscar
 actualizaciones. Si hay una versión nueva, la aplicación
 pregunta antes de descargar. Toque Descargar para instalarla o
-Ahora no para dejarlo para después. Nunca descarga sola. Además, la aplicación revisa sola si hay una versión nueva cada vez que se abre. Si la hay, avisa con el mismo cartel para descargar o dejarlo para después. Si no hay nada nuevo, no dice nada. Desde la versión 1.6.8, la aplicación también anuncia los mensajes, como el de actualización y el de imagen guardada, para que los lea Jieshuo, el lector de pantalla chino, además de TalkBack. Desde la versión 1.6.9, la casilla Ajustar tamaño automáticamente también se anuncia cuando se para sobre ella. Y desde la versión 1.6.11, cada cuadro de texto tiene su nombre fijo arriba, para que TalkBack, Jieshuo y Tiresias lo anuncien siempre, esté vacío o con texto. Desde la versión 1.6.12, los botones Pegar y Borrar quedan alineados con el cuadro. Desde la versión 1.6.13, el manual está dentro de la aplicación, en Ajustes, en Acerca de y ayuda, y la aplicación revisa sola si hay una versión nueva cada vez que se abre. Desde la versión 1.6.14, el aviso de actualización muestra qué trae la versión nueva, y la descarga se anuncia cuando empieza. Desde la versión 1.6.15, la Vista previa es a pantalla completa y se puede acercar pellizcando, el Cortador tiene marco para recortar con el dedo, la lista de fuentes está limpia y el Editor tiene vista previa en vivo: la imagen se actualiza sola, el texto se arrastra con el dedo y los colores se eligen tocando la muestra. Si ya
+Ahora no para dejarlo para después. Nunca descarga sola. Además, la aplicación revisa sola si hay una versión nueva cada vez que se abre. Si la hay, avisa con el mismo cartel para descargar o dejarlo para después. Si no hay nada nuevo, no dice nada. Desde la versión 1.6.8, la aplicación también anuncia los mensajes, como el de actualización y el de imagen guardada, para que los lea Jieshuo, el lector de pantalla chino, además de TalkBack. Desde la versión 1.6.9, la casilla Ajustar tamaño automáticamente también se anuncia cuando se para sobre ella. Y desde la versión 1.6.11, cada cuadro de texto tiene su nombre fijo arriba, para que TalkBack, Jieshuo y Tiresias lo anuncien siempre, esté vacío o con texto. Desde la versión 1.6.12, los botones Pegar y Borrar quedan alineados con el cuadro. Desde la versión 1.6.13, el manual está dentro de la aplicación, en Ajustes, en Acerca de y ayuda, y la aplicación revisa sola si hay una versión nueva cada vez que se abre. Desde la versión 1.6.14, el aviso de actualización muestra qué trae la versión nueva, y la descarga se anuncia cuando empieza. Desde la versión 1.6.15, la Vista previa es a pantalla completa y se puede acercar pellizcando, el Cortador tiene marco para recortar con el dedo, la lista de fuentes está limpia y el Editor tiene vista previa en vivo: la imagen se actualiza sola, el texto se arrastra con el dedo y los colores se eligen tocando la muestra. Desde la versión 1.6.16, todos los mensajes de la aplicación están en español neutro. Si ya
 está al día, dice que ya está al día. No acepte una versión
 vieja si se la ofrece. La última versión es la que tiene las
 correcciones.
