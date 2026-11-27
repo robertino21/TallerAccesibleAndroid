@@ -33,7 +33,7 @@ class Entorno(val app: Application, val scope: CoroutineScope) {
 }
 
 // Una versión nueva encontrada, esperando que el usuario confirme la descarga.
-data class Actualizacion(val version: String, val url: String)
+data class Actualizacion(val version: String, val url: String, val notas: String = "")
 
 private fun Entorno.ejecutar(
     ocupado: (Boolean) -> Unit,
@@ -463,6 +463,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val json = JSONObject(respuesta)
                     val tagVersion = json.getString("tag_name")
                     val assets = json.getJSONArray("assets")
+                    // Las novedades de la versión, para mostrarlas en el aviso.
+                    val notas = json.optString("body", "").trim().take(600)
 
                     // El APK es el archivo .apk, no simplemente el primer archivo.
                     var urlDescarga: String? = null
@@ -479,7 +481,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                             urlDescarga == null -> if (!silencioso) entorno.decir("No hay archivo APK en la última versión.")
                             !esMasNueva(tagVersion, instalada) -> if (!silencioso) entorno.decir("Ya estás al día, versión $instalada.")
                             else -> {
-                                actualizacionPendiente = Actualizacion(tagVersion, urlDescarga)
+                                actualizacionPendiente = Actualizacion(tagVersion, urlDescarga, notas)
                                 entorno.decir("Hay una nueva versión: $tagVersion. Revisa el aviso para descargarla.")
                             }
                         }
@@ -514,6 +516,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 withContext(Dispatchers.Main) {
                     descargando = true
                     progresoDescarga = 0f
+                    entorno.decir("Descargando la actualización...")
                 }
 
                 val url = URL(urlApk)

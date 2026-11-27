@@ -124,7 +124,7 @@ fun Raiz(vm: AppViewModel = viewModel()) {
             AlertDialog(
                 onDismissRequest = { vm.descartarActualizacion() },
                 title = { Text("Actualización disponible") },
-                text = { Text("Hay una nueva versión: ${actualizacion.version}. La instalada es ${vm.versionInstalada()}. ¿Descargar e instalar?") },
+                text = { Text("Hay una nueva versión: ${actualizacion.version}. La instalada es ${vm.versionInstalada()}. ¿Descargar e instalar?" + if (actualizacion.notas.isNotBlank()) "\n\n${actualizacion.notas}" else "") },
                 confirmButton = {
                     TextButton(onClick = { vm.descargarActualizacion() }) { Text("Descargar") }
                 },
