@@ -178,10 +178,14 @@ private fun VistaPreviaEnVivo(vm: AppViewModel) {
             val bmp = resultado.vista
             val proporcion = bmp.width.toFloat() / bmp.height.toFloat()
             val altoVista = minOf(anchoDisponible / proporcion, 400.dp)
+            // El ancho también se calcula: si la caja quedara más ancha que
+            // la imagen encajada, el fondo negro del contenedor se vería a
+            // los costados como rayas (eso pasó en la 1.6.21).
+            val anchoVista = altoVista * proporcion
             ImagenConZoom(
                 bitmap = bmp,
                 descripcion = resultado.descripcion,
-                modifier = Modifier.fillMaxWidth().height(altoVista),
+                modifier = Modifier.width(anchoVista).height(altoVista),
                 onArrastrar = { dxPct, dyPct ->
                     if (t.modo == "Simple") {
                         val s = t.simple
