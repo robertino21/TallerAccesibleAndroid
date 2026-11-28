@@ -156,7 +156,11 @@ private fun VistaPreviaEnVivo(vm: AppViewModel) {
     val t = vm.texto
     // La tarjeta se centra en la pantalla: cuando el lienzo es vertical
     // (Reel), la tarjeta es angosta y queda en el medio, sin rayas.
-    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    // El alto se calcula en el código (como mucho 400 dp): la proporción
+    // sola con un tope no frenaba la altura y en la 1.6.20 la vista previa
+    // de Reel se comía toda la pantalla, tapando los controles.
+    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        val anchoDisponible = maxWidth
     Card(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(4.dp),
@@ -169,14 +173,15 @@ private fun VistaPreviaEnVivo(vm: AppViewModel) {
     ) {
         if (resultado != null) {
             // La caja toma la forma del lienzo (ancho por alto de la imagen),
-            // con un máximo de alto, así no quedan rayas negras a los costados.
+            // con un máximo de alto, así no quedan rayas negras a los costados
+            // ni la vista previa tapa los controles.
             val bmp = resultado.vista
+            val proporcion = bmp.width.toFloat() / bmp.height.toFloat()
+            val altoVista = minOf(anchoDisponible / proporcion, 400.dp)
             ImagenConZoom(
                 bitmap = bmp,
                 descripcion = resultado.descripcion,
-                modifier = Modifier.fillMaxWidth()
-                    .aspectRatio(bmp.width.toFloat() / bmp.height.toFloat())
-                    .heightIn(max = 400.dp),
+                modifier = Modifier.fillMaxWidth().height(altoVista),
                 onArrastrar = { dxPct, dyPct ->
                     if (t.modo == "Simple") {
                         val s = t.simple
